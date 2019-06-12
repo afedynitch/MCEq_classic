@@ -244,7 +244,7 @@ class MCEqParticle(object):
             children_d[c.pdg_id] = c
         if tracking_particle.pdg_id not in children_d.keys():
             info(
-                10, 'Parent particle {0} does not decay into {1}'.format(
+                17, 'Parent particle {0} does not decay into {1}'.format(
                     self.name, tracking_particle.name))
             return False
         # Copy the decay distribution from original PDG
@@ -313,7 +313,8 @@ class MCEqParticle(object):
             if cut:
                 dlen[0:self.mix_idx] = 0.
             # TODO: verify how much this affects the result
-            return 0.9966 * dlen  # Correction for bin average
+            # return 0.9966 * dlen  # Correction for bin average
+            return dlen  # Correction for bin average
         except ZeroDivisionError:
             return np.ones_like(self._energy_grid.d)*np.inf
 
@@ -712,7 +713,7 @@ class ParticleManager(object):
         # Check if tracking particle with the alias not yet defined
         # and create new one of necessary
         if alias_name in self.pname2pref:
-            info(1, 'Re-using tracking particle with same alias name',
+            info(5, 'Re-using tracking particle',
                  alias_name)
             tracking_particle = self.pname2pref[alias_name]
         else:
@@ -744,7 +745,7 @@ class ParticleManager(object):
 
         for parent_pdg in list(set(parent_list + [(-p, h) for (p, h) in parent_list])):
             if parent_pdg not in self.pdg2pref:
-                info(10,
+                info(15,
                      'Parent particle {0} does not exist.'.format(parent_pdg))
                 continue
             if (parent_pdg, child_pdg, alias_name) in self.tracking_relations:
@@ -756,6 +757,8 @@ class ParticleManager(object):
             # Check if the tracking is successful. If not the particle is not
             # a child of the parent particle
             if self.pdg2pref[parent_pdg].track_decays(tracking_particle):
+                info(15,
+                     'Parent particle {0} tracking scheduled.'.format(parent_pdg))
                 self.tracking_relations.append((parent_pdg, child_pdg,
                                                 alias_name))
                 track_success = True
@@ -867,7 +870,7 @@ class ParticleManager(object):
         """Restores the setup of tracking particles after model changes."""
 
         from copy import copy
-        info(1, 'Restoring tracking particle setup')
+        info(5, 'Restoring tracking particle setup')
 
         if not self.tracking_relations:
             self._init_default_tracking()
@@ -885,12 +888,15 @@ class ParticleManager(object):
         """Add default tracking particles for leptons from pi, K, and mu"""
         # Init default tracking particles
         info(1, 'Initializing default tracking categories (pi, K, mu)')
-        for parents, prefix in [([(211, 0)], 'pi_'), ([(321, 0)], 'k_'),
-                                ([(13, -1), (13, 1)], 'mulr_'),
-                                ([(13, 0)], 'mu_h0_'),
-                                ([(13, -1), (13, 0), (13, 1)], 'mu_'),
-                                ([(310, 0), (130, 0)], 'K0_'),
-                                ([(22, 0)], 'em_'),]:
+        for parents, prefix in [
+            ([(211, 0)], 'pi_'), 
+            ([(321, 0)], 'k_'),
+            ([(13, -1), (13, 1)], 'mulr_'),
+            ([(13, 0)], 'mu_h0_'),
+            ([(13, -1), (13, 0), (13, 1)], 'mu_'),
+            ([(310, 0), (130, 0)], 'K0_'),
+            ([(22, 0)], 'em_')
+            ]:
             self.track_leptons_from(parents, prefix, exclude_em=True)
 
         # Track prompt leptons
