@@ -13,6 +13,7 @@ profile_mceq.py
 tests/
 *.pic
 .ipynb_*
+*.h5
 
 # Temporary data files
 *_ledpm.bz2
@@ -86,3 +87,4 @@ docs/_build/
 target/
 
 calc_part_jacobian.py
+data/mceq_db_1.h5
