@@ -28,7 +28,7 @@ config = {
     # Debug flag for verbose printing, 0 silences MCEq entirely
     "debug_level": 1,
     # Print module name in debug output
-    "print_module": True,
+    "print_module": False,
     #=========================================================================
     # Paths and library locations
     #=========================================================================
@@ -80,11 +80,11 @@ config = {
     # Parameters of numerical integration
     #===========================================================================
 
-    # Minimal energy for grid has to be > 1e-5 GeV
-    "e_min" : 1.,#8.4e-2,
+    # Minimal energy for grid
+    "e_min" : -1.,#8.4e-2,
 
     # Maximal energy for grid has to be < 1e12 GeV
-    "e_max" : 1e13,
+    "e_max" : 1e14,
 
     # Enable electromagnetic cascade with matrices from EmCA
     "enable_em" : True,
@@ -167,6 +167,10 @@ config = {
     # Helicity dependent muons decays from analytical expressions
     "muon_helicity_dependence":False,
 
+    # Assume nucleon, pion and kaon cross sections for interactions of
+    # rare or exotic particles (mostly relevant for non-compact mode)
+    "assume_nucleon_interactions_for_exotics": True,
+
     # All of the hadronic interaction models can simulate nucleon-air
     # interactions down to ~60 GeV (lab frame). This limits the
     # physically valid range of MCEq to E_lepton ~> 30 GeV. To fill this
@@ -248,7 +252,7 @@ standard_particles += [-pid for pid in standard_particles]
 
 # unflavored particles
 # append 221, 223, 333, if eta, omega and phi needed directly
-standard_particles += [22, 130, 310]  #, 221, 223, 333]
+standard_particles += [22, 111, 130, 310]  #, 221, 223, 333]
 
 
 def mceq_config_without(key_list):
