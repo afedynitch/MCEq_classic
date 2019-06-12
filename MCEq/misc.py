@@ -48,7 +48,7 @@ def gen_xmat(energy_grid):
     return _xmat
 
 
-def print_in_rows(min_dbg_level, str_list, n_cols=8):
+def print_in_rows(min_dbg_level, str_list, n_cols=5):
     """Prints contents of a list in rows `n_cols`
     entries per row.
     """
