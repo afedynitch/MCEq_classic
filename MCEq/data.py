@@ -108,7 +108,8 @@ class HDF5Backend(object):
         if config['e_min'] is not None:
             min_idx = slice0 = np.argmin(np.abs(e_centers - config['e_min']))
         if config['e_max'] is not None:
-            max_idx = slice1 = np.argmin(np.abs(e_centers - config['e_max'])) + 1
+            max_idx = slice1 = np.argmin(
+                np.abs(e_centers - config['e_max'])) + 1
         return min_idx, max_idx, slice(slice0, slice1)
 
     def _gen_db_dictionary(self, hdf_root, indptrs, equivalences={}):
@@ -125,9 +126,14 @@ class HDF5Backend(object):
         indptr_data = indptrs[:]
         len_data = hdf_root.attrs['len_data']
         if hdf_root.attrs['tuple_idcs'].shape[1] == 4:
-            model_particles = sorted(list(set(hdf_root.attrs['tuple_idcs'][:,(0,2)].flatten().tolist())))
+            model_particles = sorted(
+                list(
+                    set(hdf_root.attrs['tuple_idcs'][:,
+                                                     (0,
+                                                      2)].flatten().tolist())))
         else:
-            model_particles = sorted(list(set(hdf_root.attrs['tuple_idcs'].flatten().tolist())))
+            model_particles = sorted(
+                list(set(hdf_root.attrs['tuple_idcs'].flatten().tolist())))
 
         exclude = config['adv_set']["disabled_particles"]
         read_idx = 0
@@ -135,7 +141,7 @@ class HDF5Backend(object):
         # Reverse equivalences
         eqv_lookup = defaultdict(lambda: [])
         for k in equivalences:
-            eqv_lookup[(equivalences[k],0)].append((k, 0))
+            eqv_lookup[(equivalences[k], 0)].append((k, 0))
 
         for tupidx, tup in enumerate(hdf_root.attrs['tuple_idcs']):
 
@@ -153,7 +159,7 @@ class HDF5Backend(object):
 
             particle_list.append(parent_pdg)
             particle_list.append(child_pdg)
-            
+
             index_d[(parent_pdg, child_pdg)] = (csr_matrix(
                 (mat_data[0, read_idx:read_idx + len_data[tupidx]],
                  mat_data[1, read_idx:read_idx + len_data[tupidx]],
@@ -164,22 +170,23 @@ class HDF5Backend(object):
             relations[parent_pdg].append(child_pdg)
 
             info(
-            20, 'This parent {0} is used for interactions of'.format(
-                parent_pdg[0]), [p[0] for p in eqv_lookup[parent_pdg]],
+                20,
+                'This parent {0} is used for interactions of'.format(
+                    parent_pdg[0]), [p[0] for p in eqv_lookup[parent_pdg]],
                 condition=len(equivalences) > 0)
             if config["assume_nucleon_interactions_for_exotics"]:
                 for eqv_parent in eqv_lookup[parent_pdg]:
                     if eqv_parent[0] not in model_particles:
                         info(15, 'Skip equiv. parent', eqv_parent, 'from',
-                        parent_pdg)
+                             parent_pdg)
                         continue
                     particle_list.append(eqv_parent)
                     index_d[(eqv_parent, child_pdg)] = index_d[(parent_pdg,
                                                                 child_pdg)]
                     relations[eqv_parent] = relations[parent_pdg]
-                    info(15, 'equivalence of {0} and {1} interactions'.format(
-                        eqv_parent[0], parent_pdg[0]
-                    ))
+                    info(
+                        15, 'equivalence of {0} and {1} interactions'.format(
+                            eqv_parent[0], parent_pdg[0]))
 
             read_idx += len_data[tupidx]
 
@@ -825,27 +832,32 @@ class InteractionCrossSections(object):
         """
 
         message_templ = 'HadAirCrossSections(): replacing {0} with {1} cross-section'
-        scale = 1.0
-        if not mbarn:
-            scale = self.mbarn2cm2
+        
+        
         if parent in self.index_d.keys():
-            return scale * self.index_d[parent]
+            cs = self.index_d[parent]
         elif abs(parent) in self.index_d.keys():
-            return scale * self.index_d[abs(parent)]
+            cs = self.index_d[abs(parent)]
         elif 100 < abs(parent) < 300 and abs(parent) != 130:
-            return scale * self.index_d[211]
+            cs = self.index_d[211]
         elif 300 < abs(parent) < 1000 or abs(parent) == 130:
             info(15, message_templ.format(parent, 'K+-'))
-            return scale * self.index_d[321]
+            cs = self.index_d[321]
         elif abs(parent) > 2000 and abs(parent) < 5000:
             info(15, message_templ.format(parent, 'nucleon'))
-            return scale * self.index_d[2212]
+            cs = self.index_d[2212]
         elif 5 < abs(parent) < 23:
             info(15, 'returning 0 cross-section for lepton', parent)
-            return np.zeros_like(self.index_d[2212])
+            return np.zeros(self.energy_grid.d)
         else:
-            info(15, message_templ.format(parent, 'pion'))
-            return scale * self.index_d[211]
+            info(1, message_templ.format('Strange case for parent, using 0 as cs.'))
+            # cs = self.index_d[211]
+            cs = 0.
+            
+        if not mbarn:
+            return self.mbarn2cm2 * cs
+        else:
+            return cs
 
 
 class ContinuousLosses(object):
