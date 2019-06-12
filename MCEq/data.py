@@ -21,20 +21,52 @@ from mceq_config import config
 from os.path import join
 from misc import normalize_hadronic_model_name, is_charm_pdgid, info
 
+# TODO: Convert this to some functional generic class. Very erro prone to
+# enter stuff by hand
 equivalences = {
     'SIBYLL': {
-        130: 310,
-        3212: 3122,
-        -3212: -3122
-    },
-    'QGSJET': {
+        -3322: 2212,
+        -3312: 2212,
+        -3222: 2212,
+        -3212: 2212,
+        -3122: 2112,
+        -3112: 2112,
         -2212: 2212,
         -2112: 2212,
+        310: 130,
+        111: 211,
+        3112: 2112,
+        3122: 2112,
+        3212: 2212,
+        3222: 2212,
+        3312: 2212,
+        3322: 2212
+    },
+    'QGSJET': {
+        -4122: 2212,
+        -3322: 2212,
+        -3312: 2212,
+        -3222: 2212,
+        -3122: 2212,
+        -3112: 2212,
+        -2212: 2212,
+        -2112: 2212,
+        -421: 321,
+        -411: 321,
         -211: 211,
         -321: 321,
+        111: 211,
         130: 321,
         310: 321,
-        2112: 2212
+        411: 321,
+        421: 321,
+        2112: 2212,
+        3112: 2212,
+        3122: 2212,
+        3222: 2212,
+        3312: 2212,
+        3322: 2212,
+        4122: 2212
     },
     'DPMJET': {
         130: 310,
@@ -58,11 +90,12 @@ class HDF5Backend(object):
         with h5py.File(self.h5fname, 'r') as mceq_db:
             from MCEq.misc import energy_grid
             ca = mceq_db['common'].attrs
-            self.min_idx, self.max_idx, self._cuts = self._eval_energy_cuts(ca['e_grid'])
-            self._energy_grid = energy_grid(ca['e_grid'][self._cuts],
-                                            ca['e_bins'][self.min_idx:self.max_idx + 1],
-                                            ca['widths'][self._cuts],
-                                            self.max_idx - self.min_idx)
+            self.min_idx, self.max_idx, self._cuts = self._eval_energy_cuts(
+                ca['e_grid'])
+            self._energy_grid = energy_grid(
+                ca['e_grid'][self._cuts],
+                ca['e_bins'][self.min_idx:self.max_idx + 1],
+                ca['widths'][self._cuts], self.max_idx - self.min_idx)
             self.dim_full = ca['e_dim']
 
     @property
@@ -75,8 +108,8 @@ class HDF5Backend(object):
         if config['e_min'] is not None:
             min_idx = slice0 = np.argmin(np.abs(e_centers - config['e_min']))
         if config['e_max'] is not None:
-            max_idx = slice1 = np.argmin(np.abs(e_centers - config['e_max']))
-        return min_idx, max_idx, slice(slice0,slice1)
+            max_idx = slice1 = np.argmin(np.abs(e_centers - config['e_max'])) + 1
+        return min_idx, max_idx, slice(slice0, slice1)
 
     def _gen_db_dictionary(self, hdf_root, indptrs, equivalences={}):
 
@@ -91,9 +124,18 @@ class HDF5Backend(object):
         mat_data = hdf_root[:, :]
         indptr_data = indptrs[:]
         len_data = hdf_root.attrs['len_data']
+        if hdf_root.attrs['tuple_idcs'].shape[1] == 4:
+            model_particles = sorted(list(set(hdf_root.attrs['tuple_idcs'][:,(0,2)].flatten().tolist())))
+        else:
+            model_particles = sorted(list(set(hdf_root.attrs['tuple_idcs'].flatten().tolist())))
 
         exclude = config['adv_set']["disabled_particles"]
         read_idx = 0
+
+        # Reverse equivalences
+        eqv_lookup = defaultdict(lambda: [])
+        for k in equivalences:
+            eqv_lookup[(equivalences[k],0)].append((k, 0))
 
         for tupidx, tup in enumerate(hdf_root.attrs['tuple_idcs']):
 
@@ -111,25 +153,33 @@ class HDF5Backend(object):
 
             particle_list.append(parent_pdg)
             particle_list.append(child_pdg)
-
+            
             index_d[(parent_pdg, child_pdg)] = (csr_matrix(
                 (mat_data[0, read_idx:read_idx + len_data[tupidx]],
                  mat_data[1, read_idx:read_idx + len_data[tupidx]],
                  indptr_data[tupidx, :]),
-                shape=(self.dim_full,
-                       self.dim_full))[self._cuts, self.
-                                       min_idx:self.max_idx]).toarray()
+                shape=(self.dim_full, self.dim_full
+                       ))[self._cuts, self.min_idx:self.max_idx]).toarray()
 
             relations[parent_pdg].append(child_pdg)
 
-            # Link equivalent interactions
-            if parent_pdg in equivalences:
-                info(20, 'Applying equivalent interaction matrices to',
-                     parent_pdg)
-                particle_list.append(equivalences[parent_pdg])
-                index_d[(equivalences[parent_pdg],
-                         child_pdg)] = index_d[(parent_pdg, child_pdg)]
-                relations[equivalences[parent_pdg]] = relations[parent_pdg]
+            info(
+            20, 'This parent {0} is used for interactions of'.format(
+                parent_pdg[0]), [p[0] for p in eqv_lookup[parent_pdg]],
+                condition=len(equivalences) > 0)
+            if config["assume_nucleon_interactions_for_exotics"]:
+                for eqv_parent in eqv_lookup[parent_pdg]:
+                    if eqv_parent[0] not in model_particles:
+                        info(15, 'Skip equiv. parent', eqv_parent, 'from',
+                        parent_pdg)
+                        continue
+                    particle_list.append(eqv_parent)
+                    index_d[(eqv_parent, child_pdg)] = index_d[(parent_pdg,
+                                                                child_pdg)]
+                    relations[eqv_parent] = relations[parent_pdg]
+                    info(15, 'equivalence of {0} and {1} interactions'.format(
+                        eqv_parent[0], parent_pdg[0]
+                    ))
 
             read_idx += len_data[tupidx]
 
@@ -151,6 +201,7 @@ class HDF5Backend(object):
     def interaction_db(self, interaction_model_name):
 
         mname = normalize_hadronic_model_name(interaction_model_name)
+        info(10, 'Generating interaction db. mname={0}'.format(mname))
         with h5py.File(self.h5fname, 'r') as mceq_db:
             self._check_subgroup_exists(mceq_db['hadronic_interactions'],
                                         mname)
@@ -178,7 +229,7 @@ class HDF5Backend(object):
                     list(set(int_index['particles'] + em_index['particles'])))
                 int_index['relations'].update(em_index['relations'])
                 int_index['index_d'].update(em_index['index_d'])
-        
+
         if int_index['description'] is not None:
             int_index['description'] += '\nInteraction model name: ' + mname
         else:
@@ -187,6 +238,7 @@ class HDF5Backend(object):
         return int_index
 
     def decay_db(self, decay_dset_name):
+        info(10, 'Generating decay db. dset_name={0}'.format(decay_dset_name))
 
         with h5py.File(self.h5fname, 'r') as mceq_db:
             self._check_subgroup_exists(mceq_db['decays'], decay_dset_name)
@@ -269,15 +321,15 @@ class HDF5Backend(object):
             index_d = {}
             for pstr in cl_db.keys():
                 for hel in [0, 1, -1]:
-                    index_d[(int(pstr),
-                             hel)] = cl_db[pstr][self._cuts]
+                    index_d[(int(pstr), hel)] = cl_db[pstr][self._cuts]
             if config['enable_em']:
                 self._check_subgroup_exists(mceq_db, 'electromagnetic')
                 for hel in [0, 1, -1]:
                     index_d[(11, hel)] = mceq_db["electromagnetic"]['dEdX 11'][
                         self._cuts]
-                    index_d[(-11, hel)] = mceq_db["electromagnetic"][
-                        'dEdX -11'][self._cuts]
+                    index_d[(-11,
+                             hel)] = mceq_db["electromagnetic"]['dEdX -11'][
+                                 self._cuts]
 
         return {'parents': sorted(index_d.keys()), 'index_d': index_d}
 
@@ -339,11 +391,11 @@ class Interactions(object):
 
         # Advanced options
         regenerate_index = False
-#         if config['adv_set']['disabled_particles']:
-#             self.parents = [p for p in self.parents 
-#                             if p[0] not in config['adv_set']['disabled_particles']]
-#             regenerate_index = True
-            
+        #         if config['adv_set']['disabled_particles']:
+        #             self.parents = [p for p in self.parents
+        #                             if p[0] not in config['adv_set']['disabled_particles']]
+        #             regenerate_index = True
+
         if parent_list is not None:
             self.parents = [p for p in self.parents if p in parent_list]
             regenerate_index = True
@@ -647,11 +699,11 @@ class Decays(object):
                         _follow_decay_chain(d, plist)
                 else:
                     return plist
-                
+
             plist = []
             for p in parent_list:
                 _follow_decay_chain(p, plist)
-                
+
             self.parents = sorted(list(set(plist)))
             regenerate_index = True
 
@@ -661,7 +713,7 @@ class Decays(object):
                 if p[0] not in config['adv_set']['disable_decays']
             ]
             regenerate_index = True
-            
+
         if regenerate_index:
             self.particles = []
             for p in self.relations.keys():
@@ -778,12 +830,13 @@ class InteractionCrossSections(object):
             scale = self.mbarn2cm2
         if parent in self.index_d.keys():
             return scale * self.index_d[parent]
-        elif abs(parent) in [411, 421, 431]:
-            info(15, message_templ.format('D', 'K+-'))
+        elif abs(parent) in self.index_d.keys():
+            return scale * self.index_d[abs(parent)]
+        elif 100 < abs(parent) < 300 and abs(parent) != 130:
+            return scale * self.index_d[211]
+        elif 300 < abs(parent) < 1000 or abs(parent) == 130:
+            info(15, message_templ.format(parent, 'K+-'))
             return scale * self.index_d[321]
-        elif abs(parent) in [4332, 4232, 4132]:
-            info(15, message_templ.format('charmed baryon', 'nucleon'))
-            return scale * self.index_d[2212]
         elif abs(parent) > 2000 and abs(parent) < 5000:
             info(15, message_templ.format(parent, 'nucleon'))
             return scale * self.index_d[2212]
