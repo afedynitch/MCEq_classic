@@ -156,6 +156,8 @@ class HDF5Backend(object):
                     child_pdg[0]) in exclude):
                 read_idx += len_data[tupidx]
                 continue
+            parent_pdg = int(parent_pdg[0]), (parent_pdg[1])
+            child_pdg = int(child_pdg[0]), (child_pdg[1])
 
             particle_list.append(parent_pdg)
             particle_list.append(child_pdg)
