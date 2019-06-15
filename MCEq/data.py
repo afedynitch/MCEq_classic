@@ -69,8 +69,16 @@ equivalences = {
         4122: 2212
     },
     'DPMJET': {
-        130: 310,
-        310: 130
+        -3122: 2112,
+        -431: -321,
+        -421: -321,
+        -411: -321,
+        310: 130,
+        111: 211,
+        411: 321,
+        421: 321,
+        431: 321,
+        3122: 2112,
     }
 }
 
@@ -435,8 +443,8 @@ class Interactions(object):
                 self.particles += self.relations[p]
             self.particles = sorted(list(set(self.particles)))
 
-        if config['adv_set']['disable_direct_leptons'] or 'DPMJET' in self.iam:
-            info(5, 'Hotfix for DPMJET, no direct leptons')
+        if config['adv_set']['disable_direct_leptons']:
+            # info(5, 'Hotfix for DPMJET, no direct leptons')
             for p in self.relations.keys():
                 self.relations[p] = [
                     c for c in self.relations[p] if not 10 < abs(c[0]) < 20
@@ -835,7 +843,7 @@ class InteractionCrossSections(object):
 
         message_templ = 'HadAirCrossSections(): replacing {0} with {1} cross-section'
         
-        
+
         if parent in self.index_d.keys():
             cs = self.index_d[parent]
         elif abs(parent) in self.index_d.keys():
@@ -855,7 +863,7 @@ class InteractionCrossSections(object):
             info(1, message_templ.format('Strange case for parent, using 0 as cs.'))
             # cs = self.index_d[211]
             cs = 0.
-            
+
         if not mbarn:
             return self.mbarn2cm2 * cs
         else:
