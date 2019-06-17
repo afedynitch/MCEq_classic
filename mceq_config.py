@@ -5,9 +5,6 @@ import platform
 import os.path as path
 base_path = path.dirname(path.abspath(__file__))
 sys.path.append(base_path)
-sys.path.append(base_path + "/CRFluxModels")
-sys.path.append(base_path + "/ParticleDataTool")
-sys.path.append(base_path + "/Python-NRLMSISE-00")
 sys.path.append(base_path + "/c-NRLMSISE-00")
 
 # determine shared library extension and MKL path

@@ -22,6 +22,7 @@ The preferred way to instantiate :class:`MCEq.core.MCEqRun` is::
     mceq_run.solve()
 
 """
+import os
 from time import time
 import numpy as np
 from mceq_config import config
@@ -70,6 +71,12 @@ class MCEqRun(object):
         config = mceq_config
 
         self.mceq_db = MCEq.data.HDF5Backend()
+
+        if os.path.isfile(config['MKL_path']):
+            from ctypes import cdll, c_int, byref
+            mkl = cdll.LoadLibrary(config['MKL_path'])
+            # Set number of threads
+            mkl.mkl_set_num_threads(byref(c_int(config['MKL_threads'])))
 
         interaction_model = normalize_hadronic_model_name(interaction_model)
 
@@ -582,10 +589,10 @@ class MCEqRun(object):
         # Need to regenerate matrices completely
         return int(init)
 
-        if init and not delay_init:
-            self.int_m, self.dec_m = self.matrix_builder.construct_matrices(
-                skip_decay_matrix=True)
-            return 0
+        # if init and not delay_init:
+        #     self.int_m, self.dec_m = self.matrix_builder.construct_matrices(
+        #         skip_decay_matrix=True)
+        #     return 0
 
     def unset_mod_pprod(self, dont_fill=False):
         """Removes modifications from :func:`MCEqRun.set_mod_pprod`.

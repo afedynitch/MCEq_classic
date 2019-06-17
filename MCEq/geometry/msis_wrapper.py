@@ -1,12 +1,7 @@
-#! /usr/bin/env python
+
 from mceq_config import config
 
 from c_msis_interface import *
-
-#=========================================================================
-# NRLMSISE00
-#=========================================================================
-
 
 class NRLMSISE00Base(object):
     def __init__(self):
@@ -61,65 +56,6 @@ class NRLMSISE00Base(object):
         """Returns density in g/cm^3"""
         self._retrieve_result(altitude_cm)    
         return self.output.d[5]
-
-
-class pyNRLMSISE00(NRLMSISE00Base):
-    def init_default_values(self):
-        """Sets default to June at South Pole"""
-        self.inp.doy = self.month2doy['June']  # Day of year
-        self.inp.year = 0  # No effect
-        self.inp.sec = self.daytimes['day']  # 12:00
-        self.inp.alt = self.locations[self.current_location][2]
-        self.inp.g_lat = self.locations[self.current_location][1]
-        self.inp.g_long = self.locations[self.current_location][0]
-        self.inp.lst = self.inp.sec / 3600. + \
-            self.inp.g_long / 15.
-        # Do not touch this except you know what you are doing
-        self.inp.f107A = 150.
-        self.inp.f107 = 150.
-        self.inp.ap = 4.
-        self.inp.ap_a = ap_array()
-        self.alt_surface = self.locations[self.current_location][2]
-
-        self.flags.switches[0] = 0
-        for i in range(1, 24):
-            self.flags.switches[i] = 1
-
-    def set_location(self, tag):
-        if tag not in self.locations.keys():
-            raise Exception(
-                "NRLMSISE00::set_location(): Unknown location tag '{0}'.".format(tag))
-        self.inp.alt = self.locations[tag][2]
-        self.set_location_coord(*self.locations[tag][:2])
-        self.current_location = tag
-        self.alt_surface = self.locations[self.current_location][2]
-
-    def set_location_coord(self, longitude, latitude):
-        if abs(latitude) > 90 or abs(longitude) > 180:
-            raise Exception("NRLMSISE00::set_location_coord(): Invalid inp.")
-        self.inp.g_lat = latitude
-        self.inp.g_long = longitude
-
-    def set_season(self, tag):
-        if tag not in self.month2doy.keys():
-            raise Exception("NRLMSISE00::set_location(): Unknown season tag.")
-        self.inp.doy = self.month2doy[tag]
-
-    def set_doy(self, doy):
-        if doy < 0 or doy > 365:
-            raise Exception("NRLMSISE00::set_doy(): Day of year out of range.")
-        self.inp.doy = int(doy)
-
-    def _retrieve_result(self, altitude_cm):
-        """Calls NRLMSISE library's main function"""
-        if self.last_alt == altitude_cm:
-            return
-        
-        self.inp.alt = altitude_cm / 1e5
-        gtd7(self.inp, self.flags, self.output)
-        
-        self.last_alt = altitude_cm
-
 
 class cNRLMSISE00(NRLMSISE00Base):
     def init_default_values(self):

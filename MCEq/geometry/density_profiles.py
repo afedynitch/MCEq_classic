@@ -627,7 +627,7 @@ class MSIS00Atmosphere(EarthsAtmosphere):
     """
 
     def __init__(self, location, season):
-        from MCEq.msis_wrapper import cNRLMSISE00
+        from MCEq.geometry.msis_wrapper import cNRLMSISE00
 
         self._msis = cNRLMSISE00()
 
