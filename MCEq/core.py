@@ -291,12 +291,14 @@ class MCEqRun(object):
         skip_decay_matrix = False
 
         if not update_particle_list and self._particle_list is not None:
+            info(10, 'Re-using particle list.')
             self.interactions.load(
                 interaction_model, parent_list=self._particle_list)
             self.pman.set_interaction_model(self.int_cs, self.interactions)
             skip_decay_matrix = True
 
         elif self._particle_list is None:
+            info(10, 'New initialization of particle list.')
             # First initialization
             if particle_list is None:
                 self.interactions.load(interaction_model)
@@ -315,17 +317,18 @@ class MCEqRun(object):
 
             self.matrix_builder = MatrixBuilder(self.pman)
 
-        elif update_particle_list and particle_list != self._particle_list:
-
+        elif (update_particle_list and particle_list != self._particle_list):
+            info(10, 'Updating particle list.')
             # Updated particle list received
             if particle_list is None:
                 self.interactions.load(
-                    interaction_model, parent_list=self._particle_list)
+                    interaction_model)
             else:
                 self.interactions.load(
                     interaction_model, parent_list=particle_list)
 
             self.decays.load(parent_list=self.interactions.particles)
+            self._particle_list = self.interactions.particles + self.decays.particles
             self.pman.set_interaction_model(
                 self.int_cs,
                 self.interactions,
@@ -388,6 +391,8 @@ class MCEqRun(object):
             self._phi0[min_idx + self.pman[(2112, 0)].lidx:self.pman[(
                 2112, 0)].uidx] = 1e-4 * n_top
         elif (2212, 0) in self.pman.keys():
+            info(2, 'Neutrons not part of equation system,',
+                'substituting initial flux with protons.')
             self._phi0[min_idx + self.pman[(2212, 0)].lidx:self.pman[(
                 2212, 0)].uidx] += 1e-4 * n_top
 
@@ -654,7 +659,7 @@ class MCEqRun(object):
         self._solution, self.grid_sol = kernel(*args)
 
         info(2,
-             'time elapsed during integration: {0} sec'.format(time() - start))
+             'time elapsed during integration: {0:5.2f}sec'.format(time() - start))
 
     def _calculate_integration_path(self, int_grid, grid_var, force=False):
 
@@ -673,7 +678,7 @@ class MCEqRun(object):
         ri = self.density_model.r_X2rho
         max_lint = self.matrix_builder.max_lint
         max_ldec = self.matrix_builder.max_ldec
-        info(2, 'X_surface = {0}'.format(max_X))
+        info(2, 'X_surface = {0:7.2f}g/cm2'.format(max_X))
 
         dX_vec = []
         rho_inv_vec = []
@@ -687,7 +692,7 @@ class MCEqRun(object):
         # Euler intergrator.
         if (max_ldec * ri(config['max_density']) > max_lint
                 and config["leading_process"] == 'decays'):
-            info(2, "using decays as leading eigenvalues")
+            info(3, "using decays as leading eigenvalues")
             delta_X = lambda X: 0.95 / (max_ldec * ri(X))
         else:
             info(2, "using interactions as leading eigenvalues")
@@ -710,6 +715,110 @@ class MCEqRun(object):
         rho_inv_vec = np.array(rho_inv_vec)
 
         self.integration_path = len(dX_vec), dX_vec, rho_inv_vec, grid_idcs
+
+    def n_mu(self, grid_idx=None, min_energy_cutoff=1e-1):
+        """Returns muon number at a grid step above 
+        an energy threshold for counting."""
+        ie_min = np.argmin(
+            np.abs(self.e_bins -
+                   self.e_bins[self.e_bins >= min_energy_cutoff][0]))
+        info(
+            10,
+            'Energy cutoff for muon number calculation {0:4.3e} GeV'.format(
+                self.e_bins[ie_min]))
+        info(
+            15,
+            'First bin is between {0:3.2e} and {1:3.2e} with midpoint {2:3.2e}'
+            .format(self.e_bins[ie_min], self.e_bins[ie_min + 1],
+                    self.e_grid[ie_min]))
+        return np.sum(
+            self.get_solution(
+                'total_mu+', mag=0, integrate=True, grid_idx=grid_idx) +
+            self.get_solution(
+                'total_mu-', mag=0, integrate=True, grid_idx=grid_idx))
+
+    def n_e(self, grid_idx=None, min_energy_cutoff=1e-1):
+        """Returns muon number at a grid step above 
+        an energy threshold for counting."""
+        ie_min = np.argmin(
+            np.abs(self.e_bins -
+                   self.e_bins[self.e_bins >= min_energy_cutoff][0]))
+        info(
+            10,
+            'Energy cutoff for muon number calculation {0:4.3e} GeV'.format(
+                self.e_bins[ie_min]))
+        info(
+            15,
+            'First bin is between {0:3.2e} and {1:3.2e} with midpoint {2:3.2e}'
+            .format(self.e_bins[ie_min], self.e_bins[ie_min + 1],
+                    self.e_grid[ie_min]))
+        return np.sum(
+            self.get_solution('e+', mag=0, integrate=True, grid_idx=grid_idx) +
+            self.get_solution('e-', mag=0, integrate=True, grid_idx=grid_idx))
+
+    def z_factor(self, projectile_pdg, secondary_pdg):
+        """Energy dependent Z-factor according to Thunman et al. (1996)"""
+
+        proj = self.pman[projectile_pdg]
+        sec = self.pman[secondary_pdg]
+
+        if not proj.is_projectile:
+            raise Exception('{0} is not a projectile particle.'.format(
+                proj.name))
+        info(
+            10, 'Computing e-dependent Zfactor for {0} -> {1}'.format(
+                proj.name, sec.name))
+        if not proj.is_secondary(sec):
+            raise Exception('{0} is not a secondary particle of {1}.'.format(
+                sec.name, proj.name))
+
+        if proj == 2112:
+            nuc_flux = self.pmodel.p_and_n_flux(self.e_grid)[2]
+        else:
+            nuc_flux = self.pmodel.p_and_n_flux(self.e_grid)[1]
+        zfac = np.zeros(self.dim)
+
+        smat = proj.hadr_yields[sec]
+        proj_cs = proj.inel_cross_section()
+        zfac = np.zeros_like(self.e_grid)
+        min_energy = 2.
+        for p_eidx, e in enumerate(self.e_grid):
+            if e < min_energy:
+                min_idx = p_eidx + 1
+                continue
+            zfac[p_eidx] = np.sum(
+                smat[min_idx:p_eidx + 1, p_eidx] * nuc_flux[p_eidx] /
+                nuc_flux[min_idx:p_eidx + 1] * proj_cs[p_eidx] /
+                proj_cs[min_idx:p_eidx + 1])
+        return zfac
+
+    def decay_z_factor(self, parent_pdg, child_pdg):
+        """Energy dependent Z-factor according to Lipari (1993)."""
+
+        proj = self.pman[parent_pdg]
+        sec = self.pman[child_pdg]
+
+        if proj.is_stable:
+            raise Exception('{0} does not decay.'.format(
+                proj.name))
+        info(
+            10, 'Computing e-dependent decay Zfactor for {0} -> {1}'.format(
+                proj.name, sec.name))
+        if not proj.is_child(sec):
+            raise Exception('{0} is not a a child particle of {1}.'.format(
+                sec.name, proj.name))
+
+        cr_gamma = self.pmodel.nucleon_gamma(self.e_grid)
+        zfac = np.zeros(self.dim)
+
+        zfac = np.zeros_like(self.e_grid)
+        for p_eidx, e in enumerate(self.e_grid):
+            # if e < min_energy:
+            #     min_idx = p_eidx + 1
+            #     continue
+            xlab, xdist = proj.dNdec_dxlab(e,sec)
+            zfac[p_eidx] = np.trapz(xlab**(-cr_gamma[p_eidx]-2.)*xdist, x=xlab)
+        return zfac
 
 
 class MatrixBuilder(object):

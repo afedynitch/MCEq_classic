@@ -253,13 +253,17 @@ class MCEqParticle(object):
             tracking_particle.pdg_id]]
         return True
 
-    def is_secondary(self, pdg_id):
-        """`True` if `self` is projectile and produces `pdg_id` particles."""
-        return pdg_id in self.hadr_secondaries
+    def is_secondary(self, particle_ref):
+        """`True` if this projectile and produces particle `particle_ref`."""
+        if not isinstance(particle_ref, self.__class__):
+            raise Exception('Argument not of MCEqParticle type.')
+        return particle_ref in self.hadr_secondaries
 
-    def is_child(self, pdg_id):
-        """If particle decays into `pdg_id` return True."""
-        return pdg_id in self.children
+    def is_child(self, particle_ref):
+        """`True` if this particle decays into `particle_ref`."""
+        if not isinstance(particle_ref, self.__class__):
+            raise Exception('Argument not of MCEqParticle type.')
+        return particle_ref in self.children
 
     @property
     def hadridx(self):
@@ -394,9 +398,34 @@ class MCEqParticle(object):
 
         eidx = (np.abs(self._energy_grid.c + self.mass - energy)).argmin()
         en = self._energy_grid.c[eidx] + self.mass
-        info(2, 'Nearest energy, index: ', en, eidx, condition=verbose)
+        info(10, 'Nearest energy, index: ', en, eidx, condition=verbose)
 
         m = self.hadr_yields[sec_pdg]
+        xl_grid = (self._energy_grid.c[:eidx + 1] + self.mass) / en
+        xl_dist = en * xl_grid * m[:eidx + 1, eidx] / self._energy_grid.w[:eidx + 1]
+
+        return xl_grid, xl_dist
+
+    def dNdec_dxlab(self, energy, sec_pdg, verbose=True, **kwargs):
+        r"""Returns :math:`dN/dx_{\rm Lab}` for interaction energy close 
+        to ``energy`` for hadron-air collisions.
+
+        The function respects modifications applied via :func:`_set_mod_pprod`.
+        
+        Args:
+            energy (float): approximate interaction energy
+            prim_pdg (int): PDG ID of projectile
+            sec_pdg (int): PDG ID of secondary particle
+            verbose (bool): print out the closest energy
+        Returns:
+            (numpy.array, numpy.array): :math:`x_{\rm Lab}`, :math:`dN/dx_{\rm Lab}`
+        """
+
+        eidx = (np.abs(self._energy_grid.c + self.mass - energy)).argmin()
+        en = self._energy_grid.c[eidx] + self.mass
+        info(10, 'Nearest energy, index: ', en, eidx, condition=verbose)
+
+        m = self.decay_dists[sec_pdg]
         xl_grid = (self._energy_grid.c[:eidx + 1] + self.mass) / en
         xl_dist = en * xl_grid * m[:eidx + 1, eidx] / self._energy_grid.w[:eidx + 1]
 

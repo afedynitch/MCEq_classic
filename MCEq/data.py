@@ -69,7 +69,7 @@ equivalences = {
         4122: 2212
     },
     'DPMJET': {
-        -3122: 2112,
+        -3122: -2112,
         -431: -321,
         -421: -321,
         -411: -321,
@@ -145,6 +145,8 @@ class HDF5Backend(object):
 
         exclude = config['adv_set']["disabled_particles"]
         read_idx = 0
+        available_parents = [(pdg, parity) for (pdg, parity) in (hdf_root.attrs['tuple_idcs'][:,:2])]
+        available_parents = sorted(list(set(available_parents)))
 
         # Reverse equivalences
         eqv_lookup = defaultdict(lambda: [])
@@ -187,8 +189,11 @@ class HDF5Backend(object):
             if config["assume_nucleon_interactions_for_exotics"]:
                 for eqv_parent in eqv_lookup[parent_pdg]:
                     if eqv_parent[0] not in model_particles:
-                        info(15, 'Skip equiv. parent', eqv_parent, 'from',
+                        info(10, 'Skip equiv. parent', eqv_parent, 'from',
                              parent_pdg)
+                        continue
+                    elif eqv_parent in available_parents:
+                        info(10, 'Parent {0} has dedicated simulation.'.format(eqv_parent[0]))
                         continue
                     particle_list.append(eqv_parent)
                     index_d[(eqv_parent, child_pdg)] = index_d[(parent_pdg,
@@ -268,10 +273,6 @@ class HDF5Backend(object):
                 custom_index = self._gen_db_dictionary(
                     mceq_db['decays']['custom_decays'],
                     mceq_db['decays']['custom_decays' + '_indptrs'])
-                # for tup in custom_index['index_d']:
-                # if tup not in dec_index['index_d']:
-                #     info(2, tup, 'was not in normal decay_db.')
-                #     continue
 
                 info(2, 'Replacing decay from custom decay_db.')
                 dec_index['index_d'].update(custom_index['index_d'])
@@ -430,7 +431,7 @@ class Interactions(object):
         if (config['adv_set']['allowed_projectiles']):
             self.parents = [
                 p for p in self.parents
-                if p in config['adv_set']['allowed_projectiles']
+                if p[0] in config['adv_set']['allowed_projectiles']
             ]
             regenerate_index = True
         if regenerate_index:
