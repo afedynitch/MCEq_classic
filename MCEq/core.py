@@ -608,8 +608,18 @@ class MCEqRun(object):
         self.interactions.mod_pprod = defaultdict(lambda: {})
         # Need to regenerate matrices completely
         if not dont_fill:
-            self.int_m, self.dec_m = self.matrix_builder.construct_matrices(
-                skip_decay_matrix=True)
+            self.regenerate_matrices()
+
+    def regenerate_matrices(self, skip_decay_matrix=False):
+        """Call this function after applying particle prod. modifications aka
+        Barr parameters"""
+
+        # TODO: Not all particles need to be reset and there is some performance loss
+        # This can be optmized by refreshing only the particles that change or through
+        # lazy evaluation, i.e. hadronic channels dict. calls data.int..get_matrix on demand
+        self.pman.set_interaction_model(self.int_cs, self.interactions, force=True)
+        self.int_m, self.dec_m = self.matrix_builder.construct_matrices(
+                skip_decay_matrix=skip_decay_matrix)
 
     def solve(self, int_grid=None, grid_var='X', **kwargs):
         """Launches the solver.
@@ -904,8 +914,9 @@ class MatrixBuilder(object):
 
         self.int_m = self._csr_from_blocks(self.C_blocks)
         # -I + D
-        self.max_ldec = 0.
+        
         if not skip_decay_matrix or self.dec_m is None:
+            self.max_ldec = 0.
             for parent, child in product(cparts, cparts):
                 idx = (child.mceqidx, parent.mceqidx)
                 # Main diagonal

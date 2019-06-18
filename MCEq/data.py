@@ -522,14 +522,14 @@ class Interactions(object):
 
         info(
             2, 'modifying modify particle production' +
-            ' matrix of {0}/{1} for {2},{3}').format(prim_pdg, sec_pdg,
-                                                     x_func.__name__, args)
+            ' matrix of {0}/{1} for {2},{3}'.format(prim_pdg, sec_pdg,
+                                                     x_func.__name__, args))
 
         kmat = self._gen_mod_matrix(x_func, *args)
         mpli[pstup][(x_func.__name__, args)] = kmat
 
         info(5, 'modification "strength"',
-             np.sum(kmat) / np.count_nonzero(kmat, dtype=np.float))
+             np.sum(kmat) / np.count_nonzero(kmat))
 
         if not config['use_isospin_sym']:
             return True
@@ -634,7 +634,7 @@ class Interactions(object):
           bin widths. In later versions they will be stored with the multiplication
           carried out.
         """
-        info(20, 'entering with', parent, child)
+        info(10, 'Called for', parent, child)
         if child not in self.relations[parent]:
             raise Exception(("trying to get empty matrix {0} -> {1}").format(
                 parent, child))
@@ -645,26 +645,25 @@ class Interactions(object):
                 and (parent, -child) in self.index_d.keys():
             m_anti = self.index_d[(parent, -child)]
             ie = 50
-            info(2, 'sum in disable_leading_mesons',
+            info(5, 'sum in disable_leading_mesons',
                  (np.sum(m[:, ie - 30:ie]) - np.sum(m_anti[:, ie - 30:ie])))
 
             if (np.sum(m[:, ie - 30:ie]) - np.sum(m_anti[:, ie - 30:ie])) > 0:
-                info(2, 'inverting meson due to leading particle veto.', child,
+                info(5, 'inverting meson due to leading particle veto.', child,
                      '->', -child)
                 m = m_anti
             else:
-                info(2, 'no inversion since child not leading', child)
+                info(5, 'no inversion since child not leading', child)
         else:
             info(20, 'no meson inversion in leading particle veto.', parent,
                  child)
-
-        if (parent, child) in self.mod_pprod.keys():
+        if (parent[0], child[0]) in self.mod_pprod.keys():
             info(
-                2, 'using modified particle production for {0}/{1}'.format(
-                    parent, child))
+                5, 'using modified particle production for {0}/{1}'.format(
+                    parent[0], child[0]))
             i = 0
-            for args, mmat in self.mod_pprod[(parent, child)].items():
-                info(10, i, (parent, child), args, np.sum(mmat), np.sum(m))
+            for args, mmat in self.mod_pprod[(parent[0], child[0])].items():
+                info(10, i, (parent[0], child[0]), args, np.sum(mmat), np.sum(m))
                 i += 1
                 return m * mmat
 
