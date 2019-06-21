@@ -380,10 +380,11 @@ class MCEqRun(object):
 
         # Save initial condition
         minimal_energy = 3.
-        min_idx = np.argmin(np.abs(self._energy_grid.c - minimal_energy))
+        e_tot = self._energy_grid.c + self.pman[(2212, 0)].mass
+        min_idx = np.argmin(np.abs(e_tot - minimal_energy))
         self._phi0 *= 0
         p_top, n_top = self.get_nucleon_spectrum(
-            self._energy_grid.c[min_idx:])[1:]
+            e_tot[min_idx:])[1:]
         if (2212, 0) in self.pman.keys():
             self._phi0[min_idx + self.pman[(2212, 0)].lidx:self.pman[(
                 2212, 0)].uidx] = 1e-4 * p_top
@@ -773,7 +774,7 @@ class MCEqRun(object):
             self.get_solution('e+', mag=0, integrate=True, grid_idx=grid_idx) +
             self.get_solution('e-', mag=0, integrate=True, grid_idx=grid_idx))
 
-    def z_factor(self, projectile_pdg, secondary_pdg):
+    def z_factor(self, projectile_pdg, secondary_pdg, definition='primary_e'):
         """Energy dependent Z-factor according to Thunman et al. (1996)"""
 
         proj = self.pman[projectile_pdg]
@@ -798,16 +799,27 @@ class MCEqRun(object):
         smat = proj.hadr_yields[sec]
         proj_cs = proj.inel_cross_section()
         zfac = np.zeros_like(self.e_grid)
-        min_energy = 2.
-        for p_eidx, e in enumerate(self.e_grid):
-            if e < min_energy:
-                min_idx = p_eidx + 1
-                continue
-            zfac[p_eidx] = np.sum(
-                smat[min_idx:p_eidx + 1, p_eidx] * nuc_flux[p_eidx] /
-                nuc_flux[min_idx:p_eidx + 1] * proj_cs[p_eidx] /
-                proj_cs[min_idx:p_eidx + 1])
-        return zfac
+
+        # Definition wrt CR energy (different from Thunman) on x-axis
+        if definition=='primary_e':
+            min_energy = 2.
+            for p_eidx, e in enumerate(self.e_grid):
+                if e < min_energy:
+                    min_idx = p_eidx + 1
+                    continue
+                zfac[p_eidx] = np.sum(
+                    smat[min_idx:p_eidx + 1, p_eidx] * nuc_flux[p_eidx] /
+                    nuc_flux[min_idx:p_eidx + 1] * proj_cs[p_eidx] /
+                    proj_cs[min_idx:p_eidx + 1])
+            return zfac
+        else:
+            # Like in Thunman
+            for p_eidx, _ in enumerate(self.e_grid):
+                zfac[p_eidx] = np.sum(
+                    smat[p_eidx,p_eidx:] * nuc_flux[p_eidx:] /
+                    nuc_flux[p_eidx] * proj_cs[p_eidx:] /
+                    proj_cs[p_eidx])
+            return zfac
 
     def decay_z_factor(self, parent_pdg, child_pdg):
         """Energy dependent Z-factor according to Lipari (1993)."""
