@@ -114,6 +114,8 @@ class MCEqRun(object):
         self._phi0 = np.zeros(1)
         # Initialize matrix builder (initialized in set_interaction_model)
         self.matrix_builder = None
+        # Save initial condition (primary flux) to restore after dimensional resizing
+        self._restore_initial_condition = None
 
         # Set interaction model and compute grids and matrices
         self.set_interaction_model(
@@ -201,7 +203,7 @@ class MCEqRun(object):
         ref = self.pman.pname2pref
         sol = None
         if grid_idx is None:
-            sol = self._solution
+            sol = np.copy(self._solution)
         elif grid_idx >= len(self.grid_sol):
             sol = self.grid_sol[-1, :]
         else:
@@ -351,6 +353,10 @@ class MCEqRun(object):
         self._phi0.resize(self.dim_states)
         self._solution.resize(self.dim_states)
 
+        # Restore insital condition if present
+        if self._restore_initial_condition is not None:
+            self._restore_initial_condition[0](*self._restore_initial_condition[1:])
+
         # initialize matrices
         self.int_m, self.dec_m = self.matrix_builder.construct_matrices(
             skip_decay_matrix=skip_decay_matrix)
@@ -369,6 +375,8 @@ class MCEqRun(object):
 
         info(1, mclass.__name__, tag)
 
+        # Save primary flux model for restauration after interaction model changes
+        self._restore_initial_condition = (self.set_primary_model, mclass, tag)
         # Initialize primary model object
         self.pmodel = mclass(tag)
         self.get_nucleon_spectrum = np.vectorize(self.pmodel.p_and_n_flux)
@@ -431,6 +439,9 @@ class MCEqRun(object):
         info(
             2, 'CORSIKA ID {0}, PDG ID {1}, energy {2:5.3g} GeV'.format(
                 corsika_id, pdg_id, E))
+
+        self._restore_initial_condition = (self.set_single_primary_particle, E,
+                                           corsika_id, pdg_id)
 
         egrid = self._energy_grid.c
         ebins = self._energy_grid.b
@@ -926,7 +937,7 @@ class MatrixBuilder(object):
 
         self.int_m = self._csr_from_blocks(self.C_blocks)
         # -I + D
-        
+
         if not skip_decay_matrix or self.dec_m is None:
             self.max_ldec = 0.
             for parent, child in product(cparts, cparts):
