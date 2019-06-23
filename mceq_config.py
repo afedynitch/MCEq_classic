@@ -151,7 +151,7 @@ config = {
 
     # Improve (explicit solver) stability by averaging the continous loss
     # operator
-    "average_loss_operator": True,
+    "average_loss_operator": False,
 
     # Step size (dX) for averaging
     "av_loss_maxstep": 1e-7,
