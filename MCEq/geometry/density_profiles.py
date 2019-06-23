@@ -1040,10 +1040,10 @@ class GeneralizedTarget(object):
             self.mat_list.append(
                 [start_position_cm, self.len_target, density, name])
 
-        info(2, "{0}::add_material(): Material '{1}' added. " +
+        info(2, ("{0}::add_material(): Material '{1}' added. " +
              "location on path {2} to {3} m").format(
                  self.__class__.__name__, name, self.mat_list[-1][0],
-                 self.mat_list[-1][1])
+                 self.mat_list[-1][1]))
 
         self._update_variables()
 
