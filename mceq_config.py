@@ -78,10 +78,17 @@ config = {
     #===========================================================================
 
     # Minimal energy for grid
-    "e_min" : -1.,#8.4e-2,
+    # The minimal energy (technically) is 1e-2 GeV. Currently you can run into
+    # stability problems with the integrator with such low thresholds. Use with
+    # care and check results for oscillations and feasibility. 
+    "e_min" : 1.,
 
-    # Maximal energy for grid has to be < 1e12 GeV
-    "e_max" : 1e14,
+    # The maximal energy is 1e12 GeV, but not all interaction models run at such
+    # high energies. If you are interested in lower energies, reduce this value to
+    # for inclusive calculations to max. energy of interest + 4-5 orders of magnitude.
+    # For single primaries the maximal energy can be also set at any value. Smaller
+    # grids speed up the initialization and integration. 
+    "e_max" : 1e11,
 
     # Enable electromagnetic cascade with matrices from EmCA
     "enable_em" : True,
@@ -117,19 +124,6 @@ config = {
     # Advanced settings
     #=========================================================================
 
-    # Compact mode: Create and use a compact version of the secondary particle
-    # production, where most of the the exotic particles are integrated out, such
-    # that only pions, kaons, nucleons, lambdas, lightest charm and leading
-    # unflavored particles remain in the coupled system. Decay chains, for
-    # example via rho -> pi pi are inlcuded in the p-> pi distribution by
-    # analytical integration.
-    # While the performace gain can be significant, with mostly very small
-    # precision loss < 1% at low energies ~5% above PeV, the main purpose
-    # is to have a clean interpretation definition of secondary particle
-    # production, consitent with stable particle definitions of accelerator
-    # experiments. Here, ctau => 2.5 cm (K0S).
-    "compact_mode": True,
-
     # The leading process is can be either decay or interaction. This depends
     # on the target density and it is usually chosen automatically. For
     # advanced applications one can force "interactions" to be the dominant
@@ -142,6 +136,15 @@ config = {
     # If smoothness and shape accuracy for prompt flux is crucial, use smaller
     # values around 0.1 or 0.05
     "hybrid_crossover": 0.5,
+
+    # Maximal integration step dX in g/cm2. No limit necessary in most cases,
+    # use for debugging purposes when searching for stability issues.
+    "dXmax": 5.,
+
+    # Enable default tracking particles, such as pi_numu, pr_mu+, etc.
+    # If only total fluxes are of interest, disable this feature to gain
+    # performance since the eqution system becomes smaller and sparser
+    "enable_default_tracking" : True,
 
     # Muon energy loss according to Kokoulin et al.
     "enable_muon_energy_loss": True,

@@ -197,7 +197,6 @@ class MCEqRun(object):
         Returns:
           (numpy.array): flux of particles on energy grid :attr:`e_grid`
         """
-        from scipy.interpolate import UnivariateSpline
 
         res = np.zeros(self._energy_grid.d)
         ref = self.pman.pname2pref
@@ -222,28 +221,34 @@ class MCEqRun(object):
                             'No separate left and right handed muons available.'
                         )
                         continue
-                    res += sol[ref[ls].lidx:ref[ls].
-                               uidx] * self._energy_grid.c**mag
+                    res += sol[ref[ls].lidx:ref[ls].uidx]
             else:
-                res = sol[ref[lep_str].lidx:ref[lep_str].
-                          uidx] * self._energy_grid.c**mag
+                res = sol[ref[lep_str].lidx:ref[lep_str].uidx]
 
         elif particle_name.startswith('conv'):
             # Note: This also changed from previous MCEq versions,
             # conventional is defined as total - prompt
             lep_str = particle_name.split('_')[1]
-            res = sol[ref[lep_str].lidx:ref[lep_str].
-                      uidx] * self._energy_grid.c**mag
+            # Make recursive call to sum the left and right-handed contributions
+            if lep_str in ['mu+', 'mu-']:
+                res = self.get_solution('total_' + lep_str, mag=0, 
+                    grid_idx=grid_idx, integrate=False)
+            else:
+                res = sol[ref[lep_str].lidx:ref[lep_str].uidx]
             try:
-                res -= sol[ref['pr_' + lep_str].lidx:ref['pr_' + lep_str].
-                           uidx] * self._energy_grid.c**mag
+                res -= (
+                    sol[ref['pr_' + lep_str].lidx:ref['pr_' + lep_str].uidx] +
+                    sol[ref['vertex_' + lep_str].lidx:ref['vertex_' +
+                                                          lep_str].uidx])
+                if 'em_' + lep_str in ref:
+                    res -= sol[ref['em_' + lep_str].lidx:ref['em_' +
+                                                             lep_str].uidx]
             except KeyError:
                 info(10, 'No prompt leptons for the chosen model')
 
         else:
             try:
-                res = sol[ref[particle_name].lidx:ref[particle_name].
-                          uidx] * self._energy_grid.c**mag
+                res = sol[ref[particle_name].lidx:ref[particle_name].uidx]
             except KeyError:
                 info(10,
                      'Requested particle {0} not found.'.format(particle_name))
@@ -253,9 +258,8 @@ class MCEqRun(object):
             etot_grid = self.e_grid + ref[particle_name].mass
             nz_sol = np.where(res > 0.)
             res[nz_sol] = np.exp(
-                np.interp(
-                    np.log(etot_grid[nz_sol]), np.log(self.e_grid[nz_sol]),
-                    np.log(res[nz_sol])))
+                np.interp(np.log(etot_grid[nz_sol]),
+                          np.log(self.e_grid[nz_sol]), np.log(res[nz_sol])))
             res[~nz_sol] *= 0.
 
             if not integrate:
@@ -265,7 +269,7 @@ class MCEqRun(object):
 
         elif config['return_as'] == 'kinetic energy':
             if not integrate:
-                return res
+                return res * self._energy_grid.c**mag
             else:
                 return res * self._energy_grid.w
         else:
@@ -727,8 +731,9 @@ class MCEqRun(object):
             info(2, "using interactions as leading eigenvalues")
             delta_X = lambda X: 0.95 / max_lint
 
+        dXmax = config['dXmax']
         while X < max_X:
-            dX = delta_X(X)
+            dX = min(delta_X(X), dXmax)
             if (np.any(int_grid) and (grid_step < len(int_grid))
                     and (X + dX >= int_grid[grid_step])):
                 dX = int_grid[grid_step] - X

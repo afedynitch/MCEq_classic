@@ -272,7 +272,7 @@ class HDF5Backend(object):
                     mceq_db['decays']['custom_decays'],
                     mceq_db['decays']['custom_decays' + '_indptrs'])
 
-                info(2, 'Replacing decay from custom decay_db.')
+                info(5, 'Replacing decay from custom decay_db.')
                 dec_index['index_d'].update(custom_index['index_d'])
 
                 # Remove manually TODO: Kaon decays to muons assumed only two-body
