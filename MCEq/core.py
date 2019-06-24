@@ -231,21 +231,19 @@ class MCEqRun(object):
             lep_str = particle_name.split('_')[1]
             # Make recursive call to sum the left and right-handed contributions
             if lep_str in ['mu+', 'mu-']:
-                res = self.get_solution('total_' + lep_str, mag=0, 
+                res = self.get_solution('total_' + lep_str, mag=0,
                     grid_idx=grid_idx, integrate=False)
             else:
                 res = sol[ref[lep_str].lidx:ref[lep_str].uidx]
-            try:
-                res -= (
-                    sol[ref['pr_' + lep_str].lidx:ref['pr_' + lep_str].uidx] +
-                    sol[ref['vertex_' + lep_str].lidx:ref['vertex_' +
-                                                          lep_str].uidx])
+                if 'pr_' + lep_str in ref:
+                    res -= sol[ref['pr_' + lep_str].lidx:ref['pr_' +
+                                                             lep_str].uidx]
+                if 'vertex_' + lep_str in ref:
+                    res -= sol[ref['vertex_' + lep_str].lidx:ref['vertex_' +
+                                                                 lep_str].uidx]
                 if 'em_' + lep_str in ref:
                     res -= sol[ref['em_' + lep_str].lidx:ref['em_' +
                                                              lep_str].uidx]
-            except KeyError:
-                info(10, 'No prompt leptons for the chosen model')
-
         else:
             try:
                 res = sol[ref[particle_name].lidx:ref[particle_name].uidx]
