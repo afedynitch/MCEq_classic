@@ -935,11 +935,11 @@ class MSIS00IceCubeCentered(MSIS00Atmosphere):
 
         self._msis.set_location_coord(longitude=0.,
                                       latitude=self.latitude(theta_deg))
-        info(1, 'latitude = {0} for zenith angle = {1}'.format(
+        info(1, 'latitude = {0:5.2f} for zenith angle = {1:5.2f}'.format(
                                                 self.latitude(theta_deg),
                                                 theta_deg))
         if theta_deg > 90.:
-            info(1, 'theta = {0} below horizon. using theta = {1}'.format(
+            info(1, 'theta = {0:5.2f} below horizon. using theta = {1:5.2f}'.format(
                                                    theta_deg,
                                                    180. - theta_deg))
             theta_deg = 180. - theta_deg

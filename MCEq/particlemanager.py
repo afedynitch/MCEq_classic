@@ -966,12 +966,12 @@ class ParticleManager(object):
             p.pdg_id
             for p in self.all_particles if p.ctau < config["prompt_ctau"]
         ],
-                                'pr_',
+                                'prcas_',
                                 exclude_em=True)
         # Track leptons from interaction vertices (also prompt)
         self.track_leptons_from(
             [p.pdg_id for p in self.all_particles if p.is_projectile],
-            'vertex_',
+            'prres_',
             exclude_em=True,
             from_interactions=True)
 
