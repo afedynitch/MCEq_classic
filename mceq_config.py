@@ -34,7 +34,7 @@ config = {
     "data_dir": path.join(base_path, 'data'),
 
     # File name of the MCEq database
-    "mceq_db_fname": "mceq_db_fine.h5",
+    "mceq_db_fname": "mceq_db_lext_dpm171.h5",
 
     # full path to libmkl_rt.[so/dylib] (only if kernel=='MKL')
     "MKL_path": mkl_default + libext,
@@ -81,7 +81,7 @@ config = {
     # The minimal energy (technically) is 1e-2 GeV. Currently you can run into
     # stability problems with the integrator with such low thresholds. Use with
     # care and check results for oscillations and feasibility. 
-    "e_min" : 1.,
+    "e_min" : .1,
 
     # The maximal energy is 1e12 GeV, but not all interaction models run at such
     # high energies. If you are interested in lower energies, reduce this value to
@@ -139,7 +139,7 @@ config = {
 
     # Maximal integration step dX in g/cm2. No limit necessary in most cases,
     # use for debugging purposes when searching for stability issues.
-    "dXmax": 5.,
+    "dXmax": 10.,
 
     # Enable default tracking particles, such as pi_numu, pr_mu+, etc.
     # If only total fluxes are of interest, disable this feature to gain
@@ -154,11 +154,11 @@ config = {
 
     # Improve (explicit solver) stability by averaging the continous loss
     # operator
-    "average_loss_operator": False,
+    "average_loss_operator": True,
 
     # Step size (dX) for averaging
-    "av_loss_maxstep": 1e-7,
-    
+    "loss_step_for_average": 1e-1,
+
     # When using modified particle production matrices use
     # isospin symmetries to determine the corresponding
     # modification for neutrons and K0L/K0S
