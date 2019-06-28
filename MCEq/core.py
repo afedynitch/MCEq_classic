@@ -92,8 +92,8 @@ class MCEqRun(object):
             mceq_hdf_db=self.mceq_db)
 
         #: handler for cross-section data of type :class:`MCEq.data.HadAirCrossSections`
-        self.cont_losses = MCEq.data.ContinuousLosses(
-            mceq_hdf_db=self.mceq_db, material='air')
+        self.cont_losses = MCEq.data.ContinuousLosses(mceq_hdf_db=self.mceq_db,
+                                                      material='air')
 
         #: Interface to decay tables of the HDF5 database
         self.decays = MCEq.data.Decays(mceq_hdf_db=self.mceq_db)
@@ -118,9 +118,9 @@ class MCEqRun(object):
         self._restore_initial_condition = None
 
         # Set interaction model and compute grids and matrices
-        self.set_interaction_model(
-            interaction_model,
-            particle_list=mceq_config.pop('particle_list', None))
+        self.set_interaction_model(interaction_model,
+                                   particle_list=mceq_config.pop(
+                                       'particle_list', None))
 
         # Default GPU device id for CUDA
         self.cuda_device = config['GPU_id'] if 'GPU_id' in mceq_config else 0
@@ -166,7 +166,8 @@ class MCEqRun(object):
                      particle_name,
                      mag=0.,
                      grid_idx=None,
-                     integrate=False):
+                     integrate=False,
+                     return_as=config['return_as']):
         """Retrieves solution of the calculation on the energy grid.
 
         Some special prefixes are accepted for lepton names:
@@ -208,70 +209,88 @@ class MCEqRun(object):
         else:
             sol = self.grid_sol[grid_idx, :]
 
+        def sum_lr(lep_str, prefix):
+            result = np.zeros(self.dim)
+            for ls in lep_str, lep_str + '_l', lep_str + '_r':
+                if prefix + ls not in ref:
+                    info(
+                        15, 'Separate left and right handed particles',
+                        'or unavailable particle prefix {0}.'.format(prefix +
+                                                                     ls))
+                    continue
+                result += sol[ref[prefix + ls].lidx:ref[prefix + ls].uidx]
+            return result
+
+        lep_str = particle_name.split(
+            '_')[1] if '_' in particle_name else particle_name
+
         if particle_name.startswith('total'):
             # Note: This has changed from previous MCEq versions,
             # since pi_ and k_ prefixes are mere tracking counters
             # and no full particle species anymore
-            lep_str = particle_name.split('_')[1]
-            if lep_str in ['mu+', 'mu-']:
-                for ls in lep_str, lep_str + '_l', lep_str + '_r':
-                    if ls not in ref:
-                        info(
-                            10,
-                            'No separate left and right handed muons available.'
-                        )
-                        continue
-                    res += sol[ref[ls].lidx:ref[ls].uidx]
-            else:
-                res = sol[ref[lep_str].lidx:ref[lep_str].uidx]
+
+            res = sum_lr(lep_str, prefix='')
 
         elif particle_name.startswith('conv'):
-            # Note: This also changed from previous MCEq versions,
+            # Note: This changed from previous MCEq versions,
             # conventional is defined as total - prompt
-            lep_str = particle_name.split('_')[1]
-            # Make recursive call to sum the left and right-handed contributions
-            if lep_str in ['mu+', 'mu-']:
-                res = self.get_solution('total_' + lep_str, mag=0,
-                    grid_idx=grid_idx, integrate=False)
-            else:
-                res = sol[ref[lep_str].lidx:ref[lep_str].uidx]
-                if 'pr_' + lep_str in ref:
-                    res -= sol[ref['pr_' + lep_str].lidx:ref['pr_' +
-                                                             lep_str].uidx]
-                if 'vertex_' + lep_str in ref:
-                    res -= sol[ref['vertex_' + lep_str].lidx:ref['vertex_' +
-                                                                 lep_str].uidx]
-                if 'em_' + lep_str in ref:
-                    res -= sol[ref['em_' + lep_str].lidx:ref['em_' +
-                                                             lep_str].uidx]
+            res = (self.get_solution('total_' + lep_str,
+                                     mag=0,
+                                     grid_idx=grid_idx,
+                                     integrate=False,
+                                     return_as='kinetic energy') -
+                   self.get_solution('pr_' + lep_str,
+                                     mag=0,
+                                     grid_idx=grid_idx,
+                                     integrate=False,
+                                     return_as='kinetic energy'))
+
+        elif particle_name.startswith('pr_'):
+            res += sum_lr(lep_str, prefix='prcas_')
+            res += sum_lr(lep_str, prefix='prres_')
+            res += sum_lr(lep_str, prefix='em_')
         else:
             try:
-                res = sol[ref[particle_name].lidx:ref[particle_name].uidx]
+                res = sum_lr(particle_name, prefix='')
             except KeyError:
                 info(10,
                      'Requested particle {0} not found.'.format(particle_name))
 
         # When returning in Etot, interpolate on different grid
         if config['return_as'] == 'total energy':
-            etot_grid = self.e_grid + ref[particle_name].mass
-            nz_sol = np.where(res > 0.)
-            res[nz_sol] = np.exp(
-                np.interp(np.log(etot_grid[nz_sol]),
-                          np.log(self.e_grid[nz_sol]), np.log(res[nz_sol])))
-            res[~nz_sol] *= 0.
+            etot_bins = self.e_bins + ref[particle_name].mass
+            etot_grid = 0.5 * np.sqrt(etot_bins[1:] * etot_bins[:-1])
 
             if not integrate:
-                return res
+                return etot_grid, res * etot_grid**mag
             else:
-                return res * (etot_grid[1:] - etot_grid[:-1])
+                return etot_grid, res * etot_grid**mag * (etot_bins[1:] -
+                                               etot_bins[:-1])
 
         elif config['return_as'] == 'kinetic energy':
             if not integrate:
                 return res * self._energy_grid.c**mag
             else:
-                return res * self._energy_grid.w
+                return res * self._energy_grid.c**mag * self._energy_grid.w
+
+        elif config['return_as'] == 'total momentum':
+            ptot_bins = np.sqrt((self.e_bins + ref[particle_name].mass)**2 -
+                                ref[particle_name].mass**2)
+            ptot_grid = 0.5 * np.sqrt(ptot_bins[1:] * ptot_bins[:-1])
+            dEkindp = ptot_grid / np.sqrt(ptot_grid**2 +
+                                          ref[particle_name].mass**2)
+            res *= dEkindp
+            if not integrate:
+                return ptot_grid, res * ptot_grid**mag
+            else:
+                return ptot_grid, res * ptot_grid**mag * (ptot_bins[1:] -
+                                               ptot_bins[:-1])
+
         else:
-            raise Exception("Unknown 'return_as' variable choice.")
+            raise Exception(
+                "Unknown 'return_as' variable choice.",
+                'the options are "kinetic energy", "total energy", "total momentum"'
+            )
 
     def set_interaction_model(self,
                               interaction_model,
@@ -303,8 +322,8 @@ class MCEqRun(object):
 
         if not update_particle_list and self._particle_list is not None:
             info(10, 'Re-using particle list.')
-            self.interactions.load(
-                interaction_model, parent_list=self._particle_list)
+            self.interactions.load(interaction_model,
+                                   parent_list=self._particle_list)
             self.pman.set_interaction_model(self.int_cs, self.interactions)
             skip_decay_matrix = True
 
@@ -314,8 +333,8 @@ class MCEqRun(object):
             if particle_list is None:
                 self.interactions.load(interaction_model)
             else:
-                self.interactions.load(
-                    interaction_model, parent_list=particle_list)
+                self.interactions.load(interaction_model,
+                                       parent_list=particle_list)
 
             self.decays.load(parent_list=self.interactions.particles)
             self._particle_list = self.interactions.particles + self.decays.particles
@@ -332,11 +351,10 @@ class MCEqRun(object):
             info(10, 'Updating particle list.')
             # Updated particle list received
             if particle_list is None:
-                self.interactions.load(
-                    interaction_model)
+                self.interactions.load(interaction_model)
             else:
-                self.interactions.load(
-                    interaction_model, parent_list=particle_list)
+                self.interactions.load(interaction_model,
+                                       parent_list=particle_list)
 
             self.decays.load(parent_list=self.interactions.particles)
             self._particle_list = self.interactions.particles + self.decays.particles
@@ -357,7 +375,8 @@ class MCEqRun(object):
 
         # Restore insital condition if present
         if self._restore_initial_condition is not None:
-            self._restore_initial_condition[0](*self._restore_initial_condition[1:])
+            self._restore_initial_condition[0](
+                *self._restore_initial_condition[1:])
 
         # initialize matrices
         self.int_m, self.dec_m = self.matrix_builder.construct_matrices(
@@ -390,11 +409,18 @@ class MCEqRun(object):
 
         # Save initial condition
         minimal_energy = 3.
-        e_tot = self._energy_grid.c + self.pman[(2212, 0)].mass
+        if (2212, 0) in self.pman:
+            e_tot = self._energy_grid.c + self.pman[(2212, 0)].mass
+        else:
+            info(
+                10,
+                'No protons in eqn system, quering primary flux with kinetic energy.'
+            )
+            e_tot = self._energy_grid.c
+
         min_idx = np.argmin(np.abs(e_tot - minimal_energy))
         self._phi0 *= 0
-        p_top, n_top = self.get_nucleon_spectrum(
-            e_tot[min_idx:])[1:]
+        p_top, n_top = self.get_nucleon_spectrum(e_tot[min_idx:])[1:]
         if (2212, 0) in self.pman.keys():
             self._phi0[min_idx + self.pman[(2212, 0)].lidx:self.pman[(
                 2212, 0)].uidx] = 1e-4 * p_top
@@ -410,7 +436,7 @@ class MCEqRun(object):
                 2112, 0)].uidx] = 1e-4 * n_top
         elif (2212, 0) in self.pman.keys():
             info(2, 'Neutrons not part of equation system,',
-                'substituting initial flux with protons.')
+                 'substituting initial flux with protons.')
             self._phi0[min_idx + self.pman[(2212, 0)].lidx:self.pman[(
                 2212, 0)].uidx] += 1e-4 * n_top
 
@@ -631,9 +657,11 @@ class MCEqRun(object):
         # TODO: Not all particles need to be reset and there is some performance loss
         # This can be optmized by refreshing only the particles that change or through
         # lazy evaluation, i.e. hadronic channels dict. calls data.int..get_matrix on demand
-        self.pman.set_interaction_model(self.int_cs, self.interactions, force=True)
+        self.pman.set_interaction_model(self.int_cs,
+                                        self.interactions,
+                                        force=True)
         self.int_m, self.dec_m = self.matrix_builder.construct_matrices(
-                skip_decay_matrix=skip_decay_matrix)
+            skip_decay_matrix=skip_decay_matrix)
 
     def solve(self, int_grid=None, grid_var='X', **kwargs):
         """Launches the solver.
@@ -689,8 +717,9 @@ class MCEqRun(object):
 
         self._solution, self.grid_sol = kernel(*args)
 
-        info(2,
-             'time elapsed during integration: {0:5.2f}sec'.format(time() - start))
+        info(
+            2, 'time elapsed during integration: {0:5.2f}sec'.format(time() -
+                                                                     start))
 
     def _calculate_integration_path(self, int_grid, grid_var, force=False):
 
@@ -815,7 +844,7 @@ class MCEqRun(object):
         zfac = np.zeros_like(self.e_grid)
 
         # Definition wrt CR energy (different from Thunman) on x-axis
-        if definition=='primary_e':
+        if definition == 'primary_e':
             min_energy = 2.
             for p_eidx, e in enumerate(self.e_grid):
                 if e < min_energy:
@@ -829,10 +858,9 @@ class MCEqRun(object):
         else:
             # Like in Thunman
             for p_eidx, _ in enumerate(self.e_grid):
-                zfac[p_eidx] = np.sum(
-                    smat[p_eidx,p_eidx:] * nuc_flux[p_eidx:] /
-                    nuc_flux[p_eidx] * proj_cs[p_eidx:] /
-                    proj_cs[p_eidx])
+                zfac[p_eidx] = np.sum(smat[p_eidx, p_eidx:] *
+                                      nuc_flux[p_eidx:] / nuc_flux[p_eidx] *
+                                      proj_cs[p_eidx:] / proj_cs[p_eidx])
             return zfac
 
     def decay_z_factor(self, parent_pdg, child_pdg):
@@ -842,8 +870,7 @@ class MCEqRun(object):
         sec = self.pman[child_pdg]
 
         if proj.is_stable:
-            raise Exception('{0} does not decay.'.format(
-                proj.name))
+            raise Exception('{0} does not decay.'.format(proj.name))
         info(
             10, 'Computing e-dependent decay Zfactor for {0} -> {1}'.format(
                 proj.name, sec.name))
@@ -859,8 +886,9 @@ class MCEqRun(object):
             # if e < min_energy:
             #     min_idx = p_eidx + 1
             #     continue
-            xlab, xdist = proj.dNdec_dxlab(e,sec)
-            zfac[p_eidx] = np.trapz(xlab**(-cr_gamma[p_eidx]-2.)*xdist, x=xlab)
+            xlab, xdist = proj.dNdec_dxlab(e, sec)
+            zfac[p_eidx] = np.trapz(xlab**(-cr_gamma[p_eidx] - 2.) * xdist,
+                                    x=xlab)
         return zfac
 
 
@@ -975,14 +1003,20 @@ class MatrixBuilder(object):
 
         return self.int_m, self.dec_m
 
-    def _average_operator(self, op_mat, max_step=1e-7):
+    def _average_operator(self, op_mat):
         """Averages the continuous loss operator by performing
         1/max_step explicit euler steps"""
 
-        n_steps = int(1. / max_step)
-        info(5, 'Averaging loss operator, nsteps={0}'.format(n_steps))
-        op_step = np.eye(self._energy_grid.d) + op_mat * 2. * max_step
-        return np.linalg.matrix_power(op_step, n_steps)
+        n_steps = int(1. / config['loss_step_for_average'])
+        info(
+            10,
+            'Averaging continuous loss using {0} intermediate steps.'.format(
+                n_steps))
+
+        op_step = np.eye(
+            self._energy_grid.d) + op_mat * config['loss_step_for_average']
+        return np.linalg.matrix_power(op_step, n_steps) - np.eye(
+            self._energy_grid.d)
 
     def cont_loss_operator(self, pdg_id):
         """Returns continuous loss operator that can be summed with appropriate
@@ -991,7 +1025,7 @@ class MatrixBuilder(object):
             self.op_matrix.dot(np.diag(self.pman[pdg_id].dEdX)))
 
         if config['average_loss_operator']:
-            return self._average_operator(op_mat, config["av_loss_maxstep"])
+            return self._average_operator(op_mat)
         else:
             return op_mat
 
@@ -1078,13 +1112,12 @@ class MatrixBuilder(object):
             for p in self.pman.cascade_particles:
                 # Fill parts of the D matrix related to p as mother
                 if not p.is_stable and bool(p.children) and not p.is_tracking:
-                    self._follow_chains(
-                        p,
-                        np.diag(np.ones((self.dim))),
-                        p,
-                        p.hadridx,
-                        self.D_blocks,
-                        reclev=0)
+                    self._follow_chains(p,
+                                        np.diag(np.ones((self.dim))),
+                                        p,
+                                        p.hadridx,
+                                        self.D_blocks,
+                                        reclev=0)
                 else:
                     info(20, p.name, 'stable or not added to D matrix')
 
@@ -1110,8 +1143,12 @@ class MatrixBuilder(object):
 
                 cmat = self._zero_mat()
                 p._assign_hadr_dist_idx(s, p.hadridx, s.residx, cmat)
-                self._follow_chains(
-                    s, cmat, p, s.residx, self.C_blocks, reclev=1)
+                self._follow_chains(s,
+                                    cmat,
+                                    p,
+                                    s.residx,
+                                    self.C_blocks,
+                                    reclev=1)
 
     def _construct_differential_operator(self):
         """Constructs a derivative operator for the contiuous losses.
@@ -1153,7 +1190,6 @@ class MatrixBuilder(object):
         coeffs_rightmost = [-d for d in coeffs_leftmost[::-1]]
         denom_rightmost = denom_leftmost
 
-        info(1, 'This has to be adapted to non-uniform grid!')
         h = np.log(self._energy_grid.b[1:] / self._energy_grid.b[:-1])
         dim_e = self._energy_grid.d
         last = dim_e - 1
@@ -1161,18 +1197,23 @@ class MatrixBuilder(object):
         op_matrix = np.zeros((dim_e, dim_e))
         op_matrix[0, np.asarray(diags_leftmost)] = np.asarray(
             coeffs_leftmost) / (denom_leftmost * h[0])
-        op_matrix[1, 1 + np.asarray(diags_left_1)] = np.asarray(
-            coeffs_left_1) / (denom_left_1 * h[1])
-        op_matrix[2, 2 + np.asarray(diags_left_2)] = np.asarray(
-            coeffs_left_2) / (denom_left_2 * h[2])
+        op_matrix[1, 1 +
+                  np.asarray(diags_left_1)] = np.asarray(coeffs_left_1) / (
+                      denom_left_1 * h[1])
+        op_matrix[2, 2 +
+                  np.asarray(diags_left_2)] = np.asarray(coeffs_left_2) / (
+                      denom_left_2 * h[2])
         op_matrix[last, last + np.asarray(diags_rightmost)] = np.asarray(
             coeffs_rightmost) / (denom_rightmost * h[last])
-        op_matrix[last - 1, last - 1 + np.asarray(diags_right_1)] = np.asarray(
-            coeffs_right_1) / (denom_right_1 * h[last - 1])
-        op_matrix[last - 2, last - 2 + np.asarray(diags_right_2)] = np.asarray(
-            coeffs_right_2) / (denom_right_2 * h[last - 2])
+        op_matrix[last - 1, last - 1 +
+                  np.asarray(diags_right_1)] = np.asarray(coeffs_right_1) / (
+                      denom_right_1 * h[last - 1])
+        op_matrix[last - 2, last - 2 +
+                  np.asarray(diags_right_2)] = np.asarray(coeffs_right_2) / (
+                      denom_right_2 * h[last - 2])
         for row in range(3, dim_e - 3):
-            op_matrix[row, row + np.asarray(diags)] = np.asarray(coeffs) / (
-                denom * h[row])
+            op_matrix[row, row +
+                      np.asarray(diags)] = np.asarray(coeffs) / (denom *
+                                                                 h[row])
 
         self.op_matrix = op_matrix
