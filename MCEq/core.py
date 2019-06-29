@@ -211,27 +211,33 @@ class MCEqRun(object):
 
         def sum_lr(lep_str, prefix):
             result = np.zeros(self.dim)
+            nsuccess = 0
             for ls in lep_str, lep_str + '_l', lep_str + '_r':
                 if prefix + ls not in ref:
                     info(
-                        15, 'Separate left and right handed particles',
-                        'or unavailable particle prefix {0}.'.format(prefix +
+                        15, 'No separate left and right handed particles',
+                        ',or,  unavailable particle prefix {0}.'.format(prefix +
                                                                      ls))
                     continue
                 result += sol[ref[prefix + ls].lidx:ref[prefix + ls].uidx]
+                nsuccess += 1
+            if nsuccess == 0 and config["excpt_on_missing_particle"]:
+                raise Exception(
+                    'Requested particle {0} not found.'.format(
+                        particle_name))
             return result
 
         lep_str = particle_name.split(
             '_')[1] if '_' in particle_name else particle_name
 
-        if particle_name.startswith('total'):
+        if particle_name.startswith('total_'):
             # Note: This has changed from previous MCEq versions,
             # since pi_ and k_ prefixes are mere tracking counters
             # and no full particle species anymore
 
             res = sum_lr(lep_str, prefix='')
 
-        elif particle_name.startswith('conv'):
+        elif particle_name.startswith('conv_'):
             # Note: This changed from previous MCEq versions,
             # conventional is defined as total - prompt
             res = (self.get_solution('total_' + lep_str,
@@ -246,9 +252,12 @@ class MCEqRun(object):
                                      return_as='kinetic energy'))
 
         elif particle_name.startswith('pr_'):
-            res += sum_lr(lep_str, prefix='prcas_')
-            res += sum_lr(lep_str, prefix='prres_')
-            res += sum_lr(lep_str, prefix='em_')
+            if 'prcas_' + lep_str in ref:
+                res += sum_lr(lep_str, prefix='prcas_')
+            if 'prres_' + lep_str in ref:
+                res += sum_lr(lep_str, prefix='prres_')
+            if 'em_' + lep_str in ref:
+                res += sum_lr(lep_str, prefix='em_')
         else:
             try:
                 res = sum_lr(particle_name, prefix='')
@@ -318,14 +327,15 @@ class MCEqRun(object):
             return
 
         self.int_cs.load(interaction_model)
-        skip_decay_matrix = False
-
+        
+        #TODO: simplify this, stuff not needed anymore
         if not update_particle_list and self._particle_list is not None:
             info(10, 'Re-using particle list.')
             self.interactions.load(interaction_model,
                                    parent_list=self._particle_list)
             self.pman.set_interaction_model(self.int_cs, self.interactions)
-            skip_decay_matrix = True
+            self.pman.set_decay_channels(self.decays)
+            self.pman.set_continuous_losses(self.cont_losses)
 
         elif self._particle_list is None:
             info(10, 'New initialization of particle list.')
@@ -344,7 +354,6 @@ class MCEqRun(object):
             self.pman.set_interaction_model(self.int_cs, self.interactions)
             self.pman.set_decay_channels(self.decays)
             self.pman.set_continuous_losses(self.cont_losses)
-
             self.matrix_builder = MatrixBuilder(self.pman)
 
         elif (update_particle_list and particle_list != self._particle_list):
@@ -380,7 +389,7 @@ class MCEqRun(object):
 
         # initialize matrices
         self.int_m, self.dec_m = self.matrix_builder.construct_matrices(
-            skip_decay_matrix=skip_decay_matrix)
+            skip_decay_matrix=False)
 
     def set_primary_model(self, mclass, tag):
         """Sets primary flux model.
