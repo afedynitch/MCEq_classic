@@ -215,8 +215,8 @@ class MCEqRun(object):
             for ls in lep_str, lep_str + '_l', lep_str + '_r':
                 if prefix + ls not in ref:
                     info(
-                        15, 'No separate left and right handed particles',
-                        ',or,  unavailable particle prefix {0}.'.format(prefix +
+                        15, 'No separate left and right handed particles,',
+                        'or, unavailable particle prefix {0}.'.format(prefix +
                                                                      ls))
                     continue
                 result += sol[ref[prefix + ls].lidx:ref[prefix + ls].uidx]
@@ -403,7 +403,7 @@ class MCEqRun(object):
           tag (tuple): positional argument list for model class
         """
 
-        info(1, mclass.__name__, tag)
+        info(1, mclass.__name__, tag if tag is not None else '')
 
         # Save primary flux model for restauration after interaction model changes
         self._restore_initial_condition = (self.set_primary_model, mclass, tag)
@@ -934,7 +934,7 @@ class MatrixBuilder(object):
 
         from itertools import product
         info(
-            2, "Start filling matrices. Skip_decay_matrix = {0}".format(
+            3, "Start filling matrices. Skip_decay_matrix = {0}".format(
                 skip_decay_matrix))
 
         self._fill_matrices(skip_decay_matrix=skip_decay_matrix)
@@ -1008,7 +1008,7 @@ class MatrixBuilder(object):
             info(5, "    nnz        : {0}".format(mat.nnz))
             info(10, "    sum        :", mat.sum())
 
-        info(2, "Done filling matrices.")
+        info(3, "Done filling matrices.")
 
         return self.int_m, self.dec_m
 
