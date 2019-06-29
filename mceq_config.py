@@ -24,6 +24,12 @@ config = {
 
     # Debug flag for verbose printing, 0 silences MCEq entirely
     "debug_level": 1,
+    # Override debug prinput for functions listed here (just give the name,
+    # "get_solution" for instance) Warning, this option slows down initialization
+    # by a lot. Use only when needed.
+    "override_debug_fcn" : [],
+    # Override debug printout for debug levels < value for the functions above 
+    "override_max_level": 10,
     # Print module name in debug output
     "print_module": False,
     #=========================================================================
@@ -159,6 +165,9 @@ config = {
     # Step size (dX) for averaging
     "loss_step_for_average": 1e-1,
 
+    # Raise exception when requesting unknown particles from get_solution
+    "excpt_on_missing_particle": False,
+
     # When using modified particle production matrices use
     # isospin symmetries to determine the corresponding
     # modification for neutrons and K0L/K0S
@@ -204,9 +213,6 @@ config = {
         # Disable particle production by charm *projectiles* (interactions)
         "disable_charm_pprod": False,
 
-        # Disable production of charm *secondaries* for DPMJET-III
-        "disable_dpmjet_charm": True,
-
         # Disable resonance/prompt contribution (this group of options
         # is either obsolete or needs maintenance.)
         # "disable_resonance_decay": False,
@@ -220,7 +226,8 @@ config = {
         "allowed_projectiles": [],#2212, 2112, 211, 321, 130, 11, 22],
 
         # Disable particle (production)
-        "disabled_particles": [10313, 20, 19, 18, 17, 97, 98, 99, 101, 102, 103],
+        "disabled_particles": [
+            10313, 20, 19, 18, 17, 97, 98, 99, 101, 102, 103],
 
         # Disable leptons coming from prompt hadron decays at the vertex
         "disable_direct_leptons": False,

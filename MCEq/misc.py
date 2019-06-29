@@ -54,7 +54,7 @@ def print_in_rows(min_dbg_level, str_list, n_cols=5):
     """
     if min_dbg_level > config["debug_level"]:
         return
-        
+
     l = len(str_list)
     n_full_length = int(l / n_cols)
     n_rest = l % n_cols
@@ -133,7 +133,7 @@ def corsikaid2pdg(corsika_id):
     elif corsika_id in [100, 13]:
         return 2112
     else:
-        A,Z, _ = getAZN_corsika(corsika_id)        
+        A,Z, _ = getAZN_corsika(corsika_id)
         # 10LZZZAAAI
         pdg_id = 1000000000
         pdg_id += 10*A
@@ -152,9 +152,9 @@ def pdg2corsikaid(pdg_id):
 
     A = pdg_id % 1000 / 10
     Z = pdg_id % 1000000 / 10000
-    
+
     return A*100 + Z
-    
+
 def caller_name(skip=2):
     """Get a name of a caller in the format module.class.method
 
@@ -221,6 +221,11 @@ def info(min_dbg_level, *message, **kwargs):
     condition = kwargs.pop('condition', True)
     blank_caller = kwargs.pop('blank_caller', False)
     no_caller = kwargs.pop('no_caller', False)
+    if config["override_debug_fcn"] and min_dbg_level < config[
+            "override_max_level"]:
+        fcn_name = caller_name(skip=2).split('::')[-1].split('():')[0]
+        if fcn_name in config["override_debug_fcn"]:
+            min_dbg_level = 0
 
     if condition and min_dbg_level <= config["debug_level"]:
         message = [str(m) for m in message]
