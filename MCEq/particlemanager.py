@@ -333,9 +333,10 @@ class MCEqParticle(object):
             dlen = self.mass / self.ctau / (self._energy_grid.c + self.mass)
             if cut:
                 dlen[0:self.mix_idx] = 0.
-            # TODO: verify how much this affects the result
-            return 0.9966 * dlen  # Correction for bin average
-            # return dlen  # Correction for bin average
+            # Correction for bin average, since dec. length is a steep falling
+            # function. This factor averages the value over bin length for
+            # 10 bins per decade.
+            return 0.989*dlen  
         except ZeroDivisionError:
             return np.ones_like(self._energy_grid.d) * np.inf
 
@@ -668,6 +669,8 @@ class ParticleManager(object):
         self._cs_db = cs_db
         # Dictionary to save te tracking particle config
         self.tracking_relations = []
+        # Save the tracking relations requested by default tracking
+        self._tracking_requested = []
 
         self._init_categories(particle_pdg_list=pdg_id_list)
 
@@ -764,11 +767,22 @@ class ParticleManager(object):
 
         info(10, 'requested for', parent_list, child_pdg, alias_name)
 
+        for p in parent_list:
+            if (p, child_pdg, alias_name,
+                    from_interactions) in self._tracking_requested:
+                continue
+            self._tracking_requested.append(
+                (p, child_pdg, alias_name, from_interactions))
+
         # Check if tracking particle with the alias not yet defined
         # and create new one of necessary
         if alias_name in self.pname2pref:
             info(15, 'Re-using tracking particle', alias_name)
             tracking_particle = self.pname2pref[alias_name]
+        elif child_pdg not in self.pdg2pref:
+            info(15, 'Tracking child not a available',
+                 'for this interaction model, skipping.')
+            return
         else:
             info(10, 'Creating new tracking particle')
             # Copy all preferences of the original particle
@@ -939,19 +953,18 @@ class ParticleManager(object):
     def _restore_tracking_setup(self):
         """Restores the setup of tracking particles after model changes."""
 
-        from copy import copy
         info(10, 'Restoring tracking particle setup')
 
         if not self.tracking_relations and config["enable_default_tracking"]:
             self._init_default_tracking()
             return
 
-        # Copy needed since tracking_relations is modified in the loop below
-        self.restore_this = copy(self.tracking_relations)
+        # Clear tracking_relations for this initialization
         self.tracking_relations = []
 
-        for pid, cid, alias, int_dec in self.restore_this:
+        for pid, cid, alias, int_dec in self._tracking_requested:
             if pid not in self.pdg2pref:
+                info(15, 'Can not restore {0}, since not in particle list.')
                 continue
             self.add_tracking_particle([pid], cid, alias, int_dec)
 
@@ -959,6 +972,7 @@ class ParticleManager(object):
         """Add default tracking particles for leptons from pi, K, and mu"""
         # Init default tracking particles
         info(1, 'Initializing default tracking categories (pi, K, mu)')
+        self._tracking_requested_by_default = []
         for parents, prefix, with_helicity in [([(211, 0)], 'pi_', True),
                                                ([(321, 0)], 'k_', True),
                                                ([(13, -1),
@@ -972,6 +986,7 @@ class ParticleManager(object):
                                     prefix,
                                     exclude_em=True,
                                     use_helicities=with_helicity)
+
 
         # Track prompt leptons
         self.track_leptons_from([
