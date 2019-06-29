@@ -767,7 +767,7 @@ class ParticleManager(object):
         # Check if tracking particle with the alias not yet defined
         # and create new one of necessary
         if alias_name in self.pname2pref:
-            info(5, 'Re-using tracking particle', alias_name)
+            info(15, 'Re-using tracking particle', alias_name)
             tracking_particle = self.pname2pref[alias_name]
         else:
             info(10, 'Creating new tracking particle')
@@ -802,7 +802,8 @@ class ParticleManager(object):
                 info(15,
                      'Parent particle {0} does not exist.'.format(parent_pdg))
                 continue
-            if (parent_pdg, child_pdg, alias_name) in self.tracking_relations:
+            if (parent_pdg, child_pdg, alias_name,
+                    from_interactions) in self.tracking_relations:
                 info(
                     20, 'Tracking of {0} from {1} already activated.'.format(
                         tracking_particle.name,
@@ -821,7 +822,7 @@ class ParticleManager(object):
                     15, 'Parent particle {0} tracking scheduled.'.format(
                         parent_pdg))
                 self.tracking_relations.append(
-                    (parent_pdg, child_pdg, alias_name))
+                    (parent_pdg, child_pdg, alias_name, from_interactions))
                 track_success = True
         if track_success and tracking_particle.name not in self.pname2pref.keys(
         ):
@@ -837,7 +838,8 @@ class ParticleManager(object):
                            parent_pdg_list,
                            prefix,
                            exclude_em=True,
-                           from_interactions=False):
+                           from_interactions=False,
+                           use_helicities=False):
         """Adds tracking particles for all leptons coming from decays of parents
         in `parent_pdg_list`.
         """
@@ -848,6 +850,8 @@ class ParticleManager(object):
         ]
 
         for lepton in leptons:
+            if not use_helicities and lepton.pdg_id[1] != 0:
+                continue
             self.add_tracking_particle(parent_pdg_list, lepton.pdg_id,
                                        prefix + lepton.name, from_interactions)
 
@@ -936,30 +940,33 @@ class ParticleManager(object):
         """Restores the setup of tracking particles after model changes."""
 
         from copy import copy
-        info(5, 'Restoring tracking particle setup')
+        info(10, 'Restoring tracking particle setup')
 
         if not self.tracking_relations and config["enable_default_tracking"]:
             self._init_default_tracking()
             return
 
+        # Copy needed since tracking_relations is modified in the loop below
         self.restore_this = copy(self.tracking_relations)
         self.tracking_relations = []
 
-        for pid, cid, alias in self.restore_this:
+        for pid, cid, alias, int_dec in self.restore_this:
             if pid not in self.pdg2pref:
                 continue
-            self.add_tracking_particle([pid], cid, alias)
+            self.add_tracking_particle([pid], cid, alias, int_dec)
 
     def _init_default_tracking(self):
         """Add default tracking particles for leptons from pi, K, and mu"""
         # Init default tracking particles
         info(1, 'Initializing default tracking categories (pi, K, mu)')
-        for parents, prefix in [([(211, 0)], 'pi_'), ([(321, 0)], 'k_'),
-                                ([(13, -1), (13, 1)], 'mulr_'),
-                                ([(13, 0)], 'mu_h0_'),
-                                ([(13, -1), (13, 0), (13, 1)], 'mu_'),
-                                ([(310, 0), (130, 0)], 'K0_')]:
-            self.track_leptons_from(parents, prefix, exclude_em=True)
+        for parents, prefix, with_helicity in [([(211, 0)], 'pi_', True), 
+            ([(321, 0)], 'k_', True),
+                                ([(13, -1), (13, 1)], 'mulr_', False),
+                                ([(13, 0)], 'mu_h0_', False),
+                                ([(13, -1), (13, 0), (13, 1)], 'mu_', False),
+                                ([(310, 0), (130, 0)], 'K0_', False)]:
+            self.track_leptons_from(parents, prefix, exclude_em=True, 
+            use_helicities=with_helicity)
 
         # Track prompt leptons
         self.track_leptons_from([
@@ -967,19 +974,22 @@ class ParticleManager(object):
             for p in self.all_particles if p.ctau < config["prompt_ctau"]
         ],
                                 'prcas_',
-                                exclude_em=True)
+                                exclude_em=True,
+                                use_helicities=False)
         # Track leptons from interaction vertices (also prompt)
         self.track_leptons_from(
             [p.pdg_id for p in self.all_particles if p.is_projectile],
             'prres_',
             exclude_em=True,
-            from_interactions=True)
+            from_interactions=True,
+            use_helicities=False)
 
         self.track_leptons_from(
             [p.pdg_id for p in self.all_particles if p.is_em],
             'em_',
             exclude_em=True,
-            from_interactions=True)
+            from_interactions=True,
+            use_helicities=False)
 
     def __getitem__(self, pdg_id_or_name):
         """Returns reference to particle object."""
