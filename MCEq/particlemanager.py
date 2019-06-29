@@ -959,14 +959,19 @@ class ParticleManager(object):
         """Add default tracking particles for leptons from pi, K, and mu"""
         # Init default tracking particles
         info(1, 'Initializing default tracking categories (pi, K, mu)')
-        for parents, prefix, with_helicity in [([(211, 0)], 'pi_', True), 
-            ([(321, 0)], 'k_', True),
-                                ([(13, -1), (13, 1)], 'mulr_', False),
-                                ([(13, 0)], 'mu_h0_', False),
-                                ([(13, -1), (13, 0), (13, 1)], 'mu_', False),
-                                ([(310, 0), (130, 0)], 'K0_', False)]:
-            self.track_leptons_from(parents, prefix, exclude_em=True, 
-            use_helicities=with_helicity)
+        for parents, prefix, with_helicity in [([(211, 0)], 'pi_', True),
+                                               ([(321, 0)], 'k_', True),
+                                               ([(13, -1),
+                                                 (13, 1)], 'mulr_', False),
+                                               ([(13, 0)], 'mu_h0_', False),
+                                               ([(13, -1), (13, 0),
+                                                 (13, 1)], 'mu_', False),
+                                               ([(310, 0),
+                                                 (130, 0)], 'K0_', False)]:
+            self.track_leptons_from(parents,
+                                    prefix,
+                                    exclude_em=True,
+                                    use_helicities=with_helicity)
 
         # Track prompt leptons
         self.track_leptons_from([
