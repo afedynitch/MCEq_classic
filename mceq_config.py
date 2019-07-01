@@ -90,7 +90,7 @@ config = {
     # The minimal energy (technically) is 1e-2 GeV. Currently you can run into
     # stability problems with the integrator with such low thresholds. Use with
     # care and check results for oscillations and feasibility. 
-    "e_min" : .1,
+    "e_min" : 1.,
 
     # The maximal energy is 1e12 GeV, but not all interaction models run at such
     # high energies. If you are interested in lower energies, reduce this value to
@@ -100,7 +100,7 @@ config = {
     "e_max" : 1e11,
 
     # Enable electromagnetic cascade with matrices from EmCA
-    "enable_em" : True,
+    "enable_em" : False,
 
     # Selection of integrator (euler/odepack)
     "integrator": "euler",
@@ -159,7 +159,7 @@ config = {
     "enable_muon_energy_loss": True,
 
     # enable EM ionization loss
-    "enable_em_ion" : True,
+    "enable_em_ion" : False,
 
     # Improve (explicit solver) stability by averaging the continous loss
     # operator
@@ -183,28 +183,11 @@ config = {
     # rare or exotic particles (mostly relevant for non-compact mode)
     "assume_nucleon_interactions_for_exotics": True,
 
-    # All of the hadronic interaction models can simulate nucleon-air
-    # interactions down to ~60 GeV (lab frame). This limits the
-    # physically valid range of MCEq to E_lepton ~> 30 GeV. To fill this
-    # gap, one shall extend the high energy model with a low energy model.
-    # Currently the only choice is DPMJET-III-2017.1.
-    # Around the transition energy, MCEq linearly interpolates between
-    # neighboring energy bins of the two models, using the a number of
-    # bins specified below.
+    # This is not used in the code as before, instead the low energy
+    # extension is compiled into the HDF backend files. 
     "low_energy_extension": {
-        "enabled": True,
-        "le_model": 'DPMJET-III-2017.1',
-        # "le_model": 'DPMJET-III',
-        "he_le_transition": 80,  # GeV (not recommended to go below 80)
+        "he_le_transition": 80,  # GeV
         "nbins_interp": 3,
-        # This flag controls what to do with processes, which are not
-        # included in DPMJET, such as re-interactions of rare baryons
-        # or charm particles. If set to true these processes will be
-        # included in the merged model, but they will not be extended
-        # in the low energy range. If False, these processes will be
-        # simply ignored. In all normal cases there will be no
-        # difference. In particular in combination with the compact
-        # mode, this case doesn't even occur and output is identical.
         "use_unknown_cs": True,
     },
 
@@ -263,10 +246,3 @@ standard_particles += [-pid for pid in standard_particles]
 # unflavored particles
 # append 221, 223, 333, if eta, omega and phi needed directly
 standard_particles += [22, 111, 130, 310]  #, 221, 223, 333]
-
-
-def mceq_config_without(key_list):
-    r = dict(config)  # make a copy
-    for key in key_list:
-        del r[key]
-    return r
