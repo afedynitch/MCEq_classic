@@ -18,7 +18,7 @@ import numpy as np
 import h5py
 from collections import defaultdict
 from mceq_config import config
-from os.path import join
+from os.path import join, isfile
 from misc import normalize_hadronic_model_name, is_charm_pdgid, info
 
 # TODO: Convert this to some functional generic class. Very erro prone to
@@ -108,8 +108,17 @@ class HDF5Backend(object):
     def __init__(self):
 
         info(2, 'Opening HDF5 file', config['mceq_db_fname'])
-        self.h5fname = join(config['data_dir'], config['mceq_db_fname'])
-        with h5py.File(self.h5fname, 'r') as mceq_db:
+        self.had_fname = join(config['data_dir'], config['mceq_db_fname'])
+        if not isfile(self.had_fname):
+            raise Exception('MCEq DB file {0} not found in "data" directory.'.format(
+                config['mceq_db_fname']))
+
+        self.em_fname = join(config['data_dir'], config['em_db_fname'])
+        if config["enable_em"] and not isfile(self.had_fname):
+            raise Exception('Electromagnetic DB file {0} not found in "data" directory.'.format(
+                config['em_db_fname']))
+
+        with h5py.File(self.had_fname, 'r') as mceq_db:
             from MCEq.misc import energy_grid
             ca = mceq_db['common'].attrs
             self.min_idx, self.max_idx, self._cuts = self._eval_energy_cuts(
@@ -237,7 +246,7 @@ class HDF5Backend(object):
 
         mname = normalize_hadronic_model_name(interaction_model_name)
         info(10, 'Generating interaction db. mname={0}'.format(mname))
-        with h5py.File(self.h5fname, 'r') as mceq_db:
+        with h5py.File(self.had_fname, 'r') as mceq_db:
             self._check_subgroup_exists(mceq_db['hadronic_interactions'],
                                         mname)
             if 'SIBYLL' in mname:
@@ -253,15 +262,17 @@ class HDF5Backend(object):
                 mceq_db['hadronic_interactions'][mname + '_indptrs'],
                 equivalences=eqv)
 
-            # Append electromagnetic interaction matrices from EmCA
-            if config['enable_em']:
+
+        # Append electromagnetic interaction matrices from EmCA
+        if config['enable_em']:
+            with h5py.File(self.em_fname, 'r') as em_db:
                 info(2, 'Injecting EmCA matrices into interaction_db.')
-                self._check_subgroup_exists(mceq_db, 'electromagnetic')
+                self._check_subgroup_exists(em_db, 'electromagnetic')
                 em_index = self._gen_db_dictionary(
-                    mceq_db['electromagnetic']['emca_mats'],
-                    mceq_db['electromagnetic']['emca_mats' + '_indptrs'])
+                    em_db['electromagnetic']['emca_mats'],
+                    em_db['electromagnetic']['emca_mats' + '_indptrs'])
                 int_index['parents'] = sorted(int_index['parents'] +
-                                              em_index['parents'])
+                                                em_index['parents'])
                 int_index['particles'] = sorted(
                     list(set(int_index['particles'] + em_index['particles'])))
                 int_index['relations'].update(em_index['relations'])
@@ -277,7 +288,7 @@ class HDF5Backend(object):
     def decay_db(self, decay_dset_name):
         info(10, 'Generating decay db. dset_name={0}'.format(decay_dset_name))
 
-        with h5py.File(self.h5fname, 'r') as mceq_db:
+        with h5py.File(self.had_fname, 'r') as mceq_db:
             self._check_subgroup_exists(mceq_db['decays'], decay_dset_name)
             dec_index = self._gen_db_dictionary(
                 mceq_db['decays'][decay_dset_name],
@@ -320,7 +331,7 @@ class HDF5Backend(object):
     def cs_db(self, interaction_model_name):
 
         mname = normalize_hadronic_model_name(interaction_model_name)
-        with h5py.File(self.h5fname, 'r') as mceq_db:
+        with h5py.File(self.had_fname, 'r') as mceq_db:
             self._check_subgroup_exists(mceq_db['cross_sections'], mname)
             cs_db = mceq_db['cross_sections'][mname]
             cs_data = cs_db[:]
@@ -329,17 +340,19 @@ class HDF5Backend(object):
             for ip, p in enumerate(parents):
                 index_d[p] = cs_data[self._cuts, ip]
 
-            # Append electromagnetic interaction cross sections from EmCA
-            if config["enable_em"]:
-                self._check_subgroup_exists(mceq_db, 'electromagnetic')
-                em_cs = mceq_db["electromagnetic"]['cs'][:]
+        # Append electromagnetic interaction cross sections from EmCA
+        if config['enable_em']:
+            with h5py.File(self.em_fname, 'r') as em_db:
+                info(2, 'Injecting EmCA matrices into interaction_db.')
+                self._check_subgroup_exists(em_db, 'electromagnetic')
+                em_cs = em_db["electromagnetic"]['cs'][:]
                 em_parents = list(
-                    mceq_db["electromagnetic"]['cs'].attrs['projectiles'])
+                    em_db["electromagnetic"]['cs'].attrs['projectiles'])
+
                 for ip, p in enumerate(em_parents):
                     if p in index_d:
                         raise Exception(
                             'EM cross sections already in database?')
-
                     index_d[p] = em_cs[ip, self._cuts]
                 parents += em_parents
 
@@ -347,7 +360,7 @@ class HDF5Backend(object):
 
     def continuous_loss_db(self, medium='air'):
 
-        with h5py.File(self.h5fname, 'r') as mceq_db:
+        with h5py.File(self.had_fname, 'r') as mceq_db:
             self._check_subgroup_exists(mceq_db['continuous_losses'], medium)
             cl_db = mceq_db['continuous_losses'][medium]
 
