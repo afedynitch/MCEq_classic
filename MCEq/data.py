@@ -110,13 +110,15 @@ class HDF5Backend(object):
         info(2, 'Opening HDF5 file', config['mceq_db_fname'])
         self.had_fname = join(config['data_dir'], config['mceq_db_fname'])
         if not isfile(self.had_fname):
-            raise Exception('MCEq DB file {0} not found in "data" directory.'.format(
-                config['mceq_db_fname']))
+            raise Exception(
+                'MCEq DB file {0} not found in "data" directory.'.format(
+                    config['mceq_db_fname']))
 
         self.em_fname = join(config['data_dir'], config['em_db_fname'])
         if config["enable_em"] and not isfile(self.had_fname):
-            raise Exception('Electromagnetic DB file {0} not found in "data" directory.'.format(
-                config['em_db_fname']))
+            raise Exception(
+                'Electromagnetic DB file {0} not found in "data" directory.'.
+                format(config['em_db_fname']))
 
         with h5py.File(self.had_fname, 'r') as mceq_db:
             from MCEq.misc import energy_grid
@@ -168,7 +170,10 @@ class HDF5Backend(object):
 
         exclude = config['adv_set']["disabled_particles"]
         read_idx = 0
-        available_parents = [(pdg, parity) for (pdg, parity) in (hdf_root.attrs['tuple_idcs'][:,:2])]
+        available_parents = [
+            (pdg, parity)
+            for (pdg, parity) in (hdf_root.attrs['tuple_idcs'][:, :2])
+        ]
         available_parents = sorted(list(set(available_parents)))
 
         # Reverse equivalences
@@ -203,11 +208,10 @@ class HDF5Backend(object):
 
             relations[parent_pdg].append(child_pdg)
 
-            info(
-                20,
-                'This parent {0} is used for interactions of'.format(
-                    parent_pdg[0]), [p[0] for p in eqv_lookup[parent_pdg]],
-                condition=len(equivalences) > 0)
+            info(20,
+                 'This parent {0} is used for interactions of'.format(
+                     parent_pdg[0]), [p[0] for p in eqv_lookup[parent_pdg]],
+                 condition=len(equivalences) > 0)
             if config["assume_nucleon_interactions_for_exotics"]:
                 for eqv_parent in eqv_lookup[parent_pdg]:
                     if eqv_parent[0] not in model_particles:
@@ -215,7 +219,9 @@ class HDF5Backend(object):
                              parent_pdg)
                         continue
                     elif eqv_parent in available_parents:
-                        info(10, 'Parent {0} has dedicated simulation.'.format(eqv_parent[0]))
+                        info(
+                            10, 'Parent {0} has dedicated simulation.'.format(
+                                eqv_parent[0]))
                         continue
                     particle_list.append(eqv_parent)
                     index_d[(eqv_parent, child_pdg)] = index_d[(parent_pdg,
@@ -262,7 +268,6 @@ class HDF5Backend(object):
                 mceq_db['hadronic_interactions'][mname + '_indptrs'],
                 equivalences=eqv)
 
-
         # Append electromagnetic interaction matrices from EmCA
         if config['enable_em']:
             with h5py.File(self.em_fname, 'r') as em_db:
@@ -272,7 +277,7 @@ class HDF5Backend(object):
                     em_db['electromagnetic']['emca_mats'],
                     em_db['electromagnetic']['emca_mats' + '_indptrs'])
                 int_index['parents'] = sorted(int_index['parents'] +
-                                                em_index['parents'])
+                                              em_index['parents'])
                 int_index['particles'] = sorted(
                     list(set(int_index['particles'] + em_index['particles'])))
                 int_index['relations'].update(em_index['relations'])
@@ -369,13 +374,16 @@ class HDF5Backend(object):
                 for hel in [0, 1, -1]:
                     index_d[(int(pstr), hel)] = cl_db[pstr][self._cuts]
             if config['enable_em']:
-                self._check_subgroup_exists(mceq_db, 'electromagnetic')
-                for hel in [0, 1, -1]:
-                    index_d[(11, hel)] = mceq_db["electromagnetic"]['dEdX 11'][
-                        self._cuts]
-                    index_d[(-11,
-                             hel)] = mceq_db["electromagnetic"]['dEdX -11'][
-                                 self._cuts]
+                with h5py.File(self.em_fname, 'r') as em_db:
+                    info(2, 'Injecting EmCA matrices into interaction_db.')
+                    self._check_subgroup_exists(em_db, 'electromagnetic')
+                    for hel in [0, 1, -1]:
+                        index_d[(11,
+                                 hel)] = em_db["electromagnetic"]['dEdX 11'][
+                                     self._cuts]
+                        index_d[(-11,
+                                 hel)] = em_db["electromagnetic"]['dEdX -11'][
+                                     self._cuts]
 
         return {'parents': sorted(index_d.keys()), 'index_d': index_d}
 
@@ -547,7 +555,7 @@ class Interactions(object):
         info(
             2, 'modifying modify particle production' +
             ' matrix of {0}/{1} for {2},{3}'.format(prim_pdg, sec_pdg,
-                                                     x_func.__name__, args))
+                                                    x_func.__name__, args))
 
         kmat = self._gen_mod_matrix(x_func, *args)
         mpli[pstup][(x_func.__name__, args)] = kmat
@@ -638,11 +646,10 @@ class Interactions(object):
         for i, (prim_pdg, sec_pdg) in enumerate(sorted(self.mod_pprod)):
             for j, (argname, argv) in enumerate(self.mod_pprod[(prim_pdg,
                                                                 sec_pdg)]):
-                info(
-                    2,
-                    '{0}: {1} -> {2}, func: {3}, arg: {4}'.format(
-                        i + j, prim_pdg, sec_pdg, argname, argv),
-                    no_caller=True)
+                info(2,
+                     '{0}: {1} -> {2}, func: {3}, arg: {4}'.format(
+                         i + j, prim_pdg, sec_pdg, argname, argv),
+                     no_caller=True)
 
     def get_matrix(self, parent, child):
         """Returns a ``DIM x DIM`` yield matrix.
@@ -687,7 +694,8 @@ class Interactions(object):
                     parent[0], child[0]))
             i = 0
             for args, mmat in self.mod_pprod[(parent[0], child[0])].items():
-                info(10, i, (parent[0], child[0]), args, np.sum(mmat), np.sum(m))
+                info(10, i, (parent[0], child[0]), args, np.sum(mmat),
+                     np.sum(m))
                 i += 1
                 return m * mmat
 
@@ -866,7 +874,7 @@ class InteractionCrossSections(object):
         """
 
         message_templ = 'HadAirCrossSections(): replacing {0} with {1} cross-section'
-        if isinstance(parent,tuple):
+        if isinstance(parent, tuple):
             parent = parent[0]
         if parent in self.index_d.keys():
             cs = self.index_d[parent]
@@ -884,7 +892,10 @@ class InteractionCrossSections(object):
             info(15, 'returning 0 cross-section for lepton', parent)
             return np.zeros(self.energy_grid.d)
         else:
-            info(1, message_templ.format('Strange case for parent, using 0 as cs.'))
+            info(
+                1,
+                message_templ.format(
+                    'Strange case for parent, using 0 as cs.'))
             # cs = self.index_d[211]
             cs = 0.
 
