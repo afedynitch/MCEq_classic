@@ -217,14 +217,13 @@ class MCEqRun(object):
                     info(
                         15, 'No separate left and right handed particles,',
                         'or, unavailable particle prefix {0}.'.format(prefix +
-                                                                     ls))
+                                                                      ls))
                     continue
                 result += sol[ref[prefix + ls].lidx:ref[prefix + ls].uidx]
                 nsuccess += 1
             if nsuccess == 0 and config["excpt_on_missing_particle"]:
                 raise Exception(
-                    'Requested particle {0} not found.'.format(
-                        particle_name))
+                    'Requested particle {0} not found.'.format(particle_name))
             return result
 
         lep_str = particle_name.split(
@@ -274,7 +273,7 @@ class MCEqRun(object):
                 return etot_grid, res * etot_grid**mag
             else:
                 return etot_grid, res * etot_grid**mag * (etot_bins[1:] -
-                                               etot_bins[:-1])
+                                                          etot_bins[:-1])
 
         elif config['return_as'] == 'kinetic energy':
             if not integrate:
@@ -293,7 +292,7 @@ class MCEqRun(object):
                 return ptot_grid, res * ptot_grid**mag
             else:
                 return ptot_grid, res * ptot_grid**mag * (ptot_bins[1:] -
-                                               ptot_bins[:-1])
+                                                          ptot_bins[:-1])
 
         else:
             raise Exception(
@@ -327,7 +326,7 @@ class MCEqRun(object):
             return
 
         self.int_cs.load(interaction_model)
-        
+
         #TODO: simplify this, stuff not needed anymore
         if not update_particle_list and self._particle_list is not None:
             info(10, 'Re-using particle list.')
@@ -378,7 +377,6 @@ class MCEqRun(object):
             raise Exception('Should not happen in practice.')
 
         # Update dimensions if particle dimensions changed
-        # TODO: Can be a bug if indices for particles change
         self._phi0.resize(self.dim_states)
         self._solution.resize(self.dim_states)
 
@@ -469,6 +467,7 @@ class MCEqRun(object):
 
         from scipy.linalg import solve
         from MCEq.misc import getAZN_corsika, getAZN
+        import warnings
 
         if corsika_id and pdg_id:
             raise Exception('Provide either corsika or PDG ID')
@@ -522,6 +521,7 @@ class MCEqRun(object):
             b_protons = np.array(
                 [n_protons, En * n_protons, En**2 * n_protons])
             p_lidx = self.pman[2212].lidx
+            
             self._phi0[p_lidx + cenbin - 1:p_lidx + cenbin + 2] = solve(
                 emat, b_protons)
         if n_neutrons > 0:
@@ -627,7 +627,6 @@ class MCEqRun(object):
           delay_init (bool): Prevent init of mceq matrices if you are
                              planning to add more modifications
         """
-        # TODO: Debug this
         info(
             1, '{0}/{1}, {2}, {3}'.format(prim_pdg, sec_pdg, x_func.__name__,
                                           str(x_func_args)))
@@ -650,7 +649,6 @@ class MCEqRun(object):
           skip_fill (bool): If `true` do not regenerate matrices
           (has to be done at a later step by hand)
         """
-        # TODO: Debug this
         from collections import defaultdict
         info(1, 'Particle production modifications reset to defaults.')
 
