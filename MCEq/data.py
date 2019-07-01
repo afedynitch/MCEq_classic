@@ -77,6 +77,22 @@ equivalences = {
         421: 321,
         431: 321,
         3122: 2112,
+    },
+    'EPOSLHC': {
+        -3334: -2212,
+        -3322: -3122,
+        -3312: 2212,
+        -3222: -2212,
+        -3212: -3122,
+        -3112: 2212,
+        111: 211,
+        310: 130,
+        3112: -2212,
+        3212: 3122,
+        3222: 2212,
+        3312: -2212,
+        3322: 3122,
+        3334: -2212
     }
 }
 
@@ -169,7 +185,6 @@ class HDF5Backend(object):
 
             particle_list.append(parent_pdg)
             particle_list.append(child_pdg)
-
             index_d[(parent_pdg, child_pdg)] = (csr_matrix(
                 (mat_data[0, read_idx:read_idx + len_data[tupidx]],
                  mat_data[1, read_idx:read_idx + len_data[tupidx]],
@@ -231,6 +246,8 @@ class HDF5Backend(object):
                 eqv = equivalences['QGSJET']
             elif 'DPMJET' in mname:
                 eqv = equivalences['DPMJET']
+            elif 'EPOSLHC' in mname:
+                eqv = equivalences['EPOSLHC']
             int_index = self._gen_db_dictionary(
                 mceq_db['hadronic_interactions'][mname],
                 mceq_db['hadronic_interactions'][mname + '_indptrs'],
@@ -407,10 +424,6 @@ class Interactions(object):
 
         # Advanced options
         regenerate_index = False
-        #         if config['adv_set']['disabled_particles']:
-        #             self.parents = [p for p in self.parents
-        #                             if p[0] not in config['adv_set']['disabled_particles']]
-        #             regenerate_index = True
 
         if parent_list is not None:
             self.parents = [p for p in self.parents if p in parent_list]
@@ -840,8 +853,8 @@ class InteractionCrossSections(object):
         """
 
         message_templ = 'HadAirCrossSections(): replacing {0} with {1} cross-section'
-        
-
+        if isinstance(parent,tuple):
+            parent = parent[0]
         if parent in self.index_d.keys():
             cs = self.index_d[parent]
         elif abs(parent) in self.index_d.keys():
@@ -851,7 +864,7 @@ class InteractionCrossSections(object):
         elif 300 < abs(parent) < 1000 or abs(parent) == 130:
             info(15, message_templ.format(parent, 'K+-'))
             cs = self.index_d[321]
-        elif abs(parent) > 2000 and abs(parent) < 5000:
+        elif abs(parent) > 1000 and abs(parent) < 5000:
             info(15, message_templ.format(parent, 'nucleon'))
             cs = self.index_d[2212]
         elif 5 < abs(parent) < 23:

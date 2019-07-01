@@ -336,7 +336,7 @@ class MCEqParticle(object):
             # Correction for bin average, since dec. length is a steep falling
             # function. This factor averages the value over bin length for
             # 10 bins per decade.
-            return 0.989*dlen  
+            return 0.989 * dlen
         except ZeroDivisionError:
             return np.ones_like(self._energy_grid.d) * np.inf
 
@@ -986,7 +986,6 @@ class ParticleManager(object):
                                     prefix,
                                     exclude_em=True,
                                     use_helicities=with_helicity)
-
 
         # Track prompt leptons
         self.track_leptons_from([
