@@ -353,7 +353,7 @@ class MCEqParticle(object):
         #: unit - :math:`\text{GeV}^2 \cdot \text{mbarn}`
         GeV2mbarn = 10.0 * GeVfm**2
         #: unit conversion - :math:`\text{mbarn} \to \text{cm}^2`
-        mbarn2cm2 = GeVcm**2 / GeV2mbarn
+        mbarn2cm2 =  GeV2mbarn / GeVcm**2
         if mbarn:
             return mbarn2cm2 * self.cs
 
