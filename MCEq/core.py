@@ -202,6 +202,8 @@ class MCEqRun(object):
         res = np.zeros(self._energy_grid.d)
         ref = self.pman.pname2pref
         sol = None
+        if grid_idx is not None and len(self.grid_sol) == 0:
+            raise Exception('Solution not has not been computed on grid. Check input.')
         if grid_idx is None:
             sol = np.copy(self._solution)
         elif grid_idx >= len(self.grid_sol):
@@ -863,7 +865,7 @@ class MCEqRun(object):
                     proj_cs[min_idx:p_eidx + 1])
             return zfac
         else:
-            # Like in Thunman
+            # Like in Thunman et al. 1996
             for p_eidx, _ in enumerate(self.e_grid):
                 zfac[p_eidx] = np.sum(smat[p_eidx, p_eidx:] *
                                       nuc_flux[p_eidx:] / nuc_flux[p_eidx] *
