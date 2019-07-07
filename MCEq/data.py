@@ -693,11 +693,12 @@ class Interactions(object):
                 5, 'using modified particle production for {0}/{1}'.format(
                     parent[0], child[0]))
             i = 0
+            m = np.copy(m)
             for args, mmat in self.mod_pprod[(parent[0], child[0])].items():
                 info(10, i, (parent[0], child[0]), args, np.sum(mmat),
                      np.sum(m))
                 i += 1
-                return m * mmat
+                m *= mmat
 
         return m
 
