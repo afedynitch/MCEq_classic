@@ -267,8 +267,8 @@ class MCEqRun(object):
                      'Requested particle {0} not found.'.format(particle_name))
 
         # When returning in Etot, interpolate on different grid
-        if config['return_as'] == 'total energy':
-            etot_bins = self.e_bins + ref[particle_name].mass
+        if return_as == 'total energy':
+            etot_bins = self.e_bins + ref[lep_str].mass
             etot_grid = 0.5 * np.sqrt(etot_bins[1:] * etot_bins[:-1])
 
             if not integrate:
@@ -277,18 +277,18 @@ class MCEqRun(object):
                 return etot_grid, res * etot_grid**mag * (etot_bins[1:] -
                                                           etot_bins[:-1])
 
-        elif config['return_as'] == 'kinetic energy':
+        elif return_as == 'kinetic energy':
             if not integrate:
                 return res * self._energy_grid.c**mag
             else:
                 return res * self._energy_grid.c**mag * self._energy_grid.w
 
-        elif config['return_as'] == 'total momentum':
-            ptot_bins = np.sqrt((self.e_bins + ref[particle_name].mass)**2 -
-                                ref[particle_name].mass**2)
+        elif return_as == 'total momentum':
+            ptot_bins = np.sqrt((self.e_bins + ref[lep_str].mass)**2 -
+                                ref[lep_str].mass**2)
             ptot_grid = 0.5 * np.sqrt(ptot_bins[1:] * ptot_bins[:-1])
             dEkindp = ptot_grid / np.sqrt(ptot_grid**2 +
-                                          ref[particle_name].mass**2)
+                                          ref[lep_str].mass**2)
             res *= dEkindp
             if not integrate:
                 return ptot_grid, res * ptot_grid**mag
