@@ -1,6 +1,6 @@
 
 from mceq_config import config
-
+from MCEq.misc import info
 from c_msis_interface import *
 
 class NRLMSISE00Base(object):
@@ -92,12 +92,14 @@ class cNRLMSISE00(NRLMSISE00Base):
         if tag not in self.locations.keys():
             raise Exception(
                 "NRLMSISE00::set_location(): Unknown location tag '{0}'.".format(tag))
+        
         self.inp.alt = c_double(self.locations[tag][2])
         self.set_location_coord(*self.locations[tag][:2])
         self.current_location = tag
         self.alt_surface = self.locations[self.current_location][2]
 
     def set_location_coord(self, longitude, latitude):
+        info(5, 'long={0:5.2f}, lat={1:5.2f}'.format(longitude, latitude))
         if abs(latitude) > 90 or abs(longitude) > 180:
             raise Exception("NRLMSISE00::set_location_coord(): Invalid inp.")
         self.inp.g_lat = c_double(latitude)
@@ -106,11 +108,13 @@ class cNRLMSISE00(NRLMSISE00Base):
     def set_season(self, tag):
         if tag not in self.month2doy.keys():
             raise Exception("NRLMSISE00::set_location(): Unknown season tag.")
+        info(5, 'Season', tag,'doy=',self.month2doy[tag])
         self.inp.doy = self.month2doy[tag]
 
     def set_doy(self, doy):
         if doy < 0 or doy > 365:
             raise Exception("NRLMSISE00::set_doy(): Day of year out of range.")
+        info(5, 'day of year',doy)
         self.inp.doy = doy
 
     def _retrieve_result(self, altitude_cm):
