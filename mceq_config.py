@@ -40,7 +40,7 @@ config = {
     "data_dir": path.join(base_path, 'data'),
 
     # File name of the MCEq database
-    "mceq_db_fname": "mceq_db_lext_dpm171.h5",
+    "mceq_db_fname": "mceq_db_lext_dpm191.h5",
 
     # File name of the MCEq database
     "em_db_fname": "EM_Model_Tsai-Max_Z7.31.h5",

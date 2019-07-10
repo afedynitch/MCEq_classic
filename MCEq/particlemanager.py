@@ -911,6 +911,8 @@ class ParticleManager(object):
             p for p in particle_list if not p.is_resonance
         ]
 
+        self.cascade_particles = sorted(self.cascade_particles, key=lambda p: abs(p.pdg_id[0]))
+
         # These particles will only exist implicitely and integated out
         self.resonances = [p for p in particle_list if p.is_resonance]
 
