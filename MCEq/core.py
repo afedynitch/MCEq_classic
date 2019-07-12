@@ -269,7 +269,7 @@ class MCEqRun(object):
         # When returning in Etot, interpolate on different grid
         if return_as == 'total energy':
             etot_bins = self.e_bins + ref[lep_str].mass
-            etot_grid = 0.5 * np.sqrt(etot_bins[1:] * etot_bins[:-1])
+            etot_grid = np.sqrt(etot_bins[1:] * etot_bins[:-1])
 
             if not integrate:
                 return etot_grid, res * etot_grid**mag
@@ -286,7 +286,7 @@ class MCEqRun(object):
         elif return_as == 'total momentum':
             ptot_bins = np.sqrt((self.e_bins + ref[lep_str].mass)**2 -
                                 ref[lep_str].mass**2)
-            ptot_grid = 0.5 * np.sqrt(ptot_bins[1:] * ptot_bins[:-1])
+            ptot_grid = np.sqrt(ptot_bins[1:] * ptot_bins[:-1])
             dEkindp = ptot_grid / np.sqrt(ptot_grid**2 +
                                           ref[lep_str].mass**2)
             res *= dEkindp
