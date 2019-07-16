@@ -567,7 +567,7 @@ class MCEqParticle(object):
         elif np.any(inv_intlen > 0.):
             with np.errstate(divide='ignore'):
                 lint = 1. / inv_intlen
-            d_tilde = np.zeros_like(inv_intlen)
+            d_tilde = np.zeros(d)
             d_tilde[inv_declen > 0] = 1. / inv_declen[inv_declen > 0]
             # multiply with maximal density encountered along the
             # integration path
@@ -634,7 +634,6 @@ class ParticleManager(object):
     """
 
     def __init__(self, pdg_id_list, energy_grid, cs_db, mod_table=None):
-        from collections import defaultdict
         # (dict) Dimension of primary grid
         self._energy_grid = energy_grid
         # Particle index shortcuts

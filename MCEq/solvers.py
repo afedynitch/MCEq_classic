@@ -95,9 +95,9 @@ def solv_numpy(nsteps, dX, rho_inv, int_m, dec_m, phi, grid_idcs):
 class CUDASparseContext(object):
     def __init__(self, int_m, dec_m, device_id=0):
 
-        if config.CUDA_fp_precision == 32:
+        if config.cuda_fp_precision == 32:
             self.fl_pr = np.float32
-        elif config.CUDA_fp_precision == 64:
+        elif config.cuda_fp_precision == 64:
             self.fl_pr = np.float64
         else:
             raise Exception(
@@ -302,99 +302,99 @@ def solv_MKL_sparse(nsteps, dX, rho_inv, int_m, dec_m, phi, grid_idcs):
 
     return npphi, np.asarray(grid_sol)
 
-    # TODO: Debug this and transition to BDF
-    def _odepack(dXstep=.1,
-                 initial_depth=0.0,
-                 int_grid=None,
-                 grid_var='X',
-                 *args,
-                 **kwargs):
-        """Solves the transport equations with solvers from ODEPACK.
+# # TODO: Debug this and transition to BDF
+# def _odepack(dXstep=.1,
+#                 initial_depth=0.0,
+#                 int_grid=None,
+#                 grid_var='X',
+#                 *args,
+#                 **kwargs):
+#     """Solves the transport equations with solvers from ODEPACK.
 
-        Args:
-          dXstep (float): external step size (adaptive sovlers make more steps internally)
-          initial_depth (float): starting depth in g/cm**2
-          int_grid (list): list of depths at which results are recorded
-          grid_var (str): Can be depth `X` or something else (currently only `X` supported)
+#     Args:
+#         dXstep (float): external step size (adaptive sovlers make more steps internally)
+#         initial_depth (float): starting depth in g/cm**2
+#         int_grid (list): list of depths at which results are recorded
+#         grid_var (str): Can be depth `X` or something else (currently only `X` supported)
 
-        """
-        from scipy.integrate import ode
-        ri = self.density_model.r_X2rho
+#     """
+#     from scipy.integrate import ode
+#     ri = self.density_model.r_X2rho
 
-        if config.enable_muon_energy_loss:
-            raise NotImplementedError(
-                'Energy loss not imlemented for this solver.')
+#     if config.enable_muon_energy_loss:
+#         raise NotImplementedError(
+#             'Energy loss not imlemented for this solver.')
 
-        # Functional to solve
-        def dPhi_dX(X, phi, *args):
-            return self.int_m.dot(phi) + self.dec_m.dot(ri(X) * phi)
+#     # Functional to solve
+#     def dPhi_dX(X, phi, *args):
+#         return self.int_m.dot(phi) + self.dec_m.dot(ri(X) * phi)
 
-        # Jacobian doesn't work with sparse matrices, and any precision
-        # or speed advantage disappear if used with dense algebra
-        def jac(X, phi, *args):
-            # print 'jac', X, phi
-            return (self.int_m + self.dec_m * ri(X)).todense()
+#     # Jacobian doesn't work with sparse matrices, and any precision
+#     # or speed advantage disappear if used with dense algebra
+#     def jac(X, phi, *args):
+#         # print 'jac', X, phi
+#         return (self.int_m + self.dec_m * ri(X)).todense()
 
-        # Initial condition
-        phi0 = np.copy(self.phi0)
+#     # Initial condition
+#     phi0 = np.copy(self.phi0)
 
-        # Initialize variables
-        grid_sol = []
+#     # Initialize variables
+#     grid_sol = []
 
-        # Setup solver
-        r = ode(dPhi_dX).set_integrator(
-            with_jacobian=False, **config.ode_params)
+#     # Setup solver
+#     r = ode(dPhi_dX).set_integrator(
+#         with_jacobian=False, **config.ode_params)
 
-        if int_grid is not None:
-            initial_depth = int_grid[0]
-            int_grid = int_grid[1:]
-            max_X = int_grid[-1]
-            grid_sol.append(phi0)
+#     if int_grid is not None:
+#         initial_depth = int_grid[0]
+#         int_grid = int_grid[1:]
+#         max_X = int_grid[-1]
+#         grid_sol.append(phi0)
 
-        else:
-            max_X = self.density_model.max_X
+#     else:
+#         max_X = self.density_model.max_X
 
-        info(
-            1,
-            'your X-grid is shorter then the material',
-            condition=max_X < self.density_model.max_X)
-        info(
-            1,
-            'your X-grid exceeds the dimentsions of the material',
-            condition=max_X > self.density_model.max_X)
+#     info(
+#         1,
+#         'your X-grid is shorter then the material',
+#         condition=max_X < self.density_model.max_X)
+#     info(
+#         1,
+#         'your X-grid exceeds the dimentsions of the material',
+#         condition=max_X > self.density_model.max_X)
 
-        # Initial value
-        r.set_initial_value(phi0, initial_depth)
+#     # Initial value
+#     r.set_initial_value(phi0, initial_depth)
 
-        info(
-            2, 'initial depth: {0:3.2e}, maximal depth {1:}'.format(
-                initial_depth, max_X))
+#     info(
+#         2, 'initial depth: {0:3.2e}, maximal depth {1:}'.format(
+#             initial_depth, max_X))
 
-        start = time()
-        if int_grid is None:
-            i = 0
-            while r.successful() and (r.t + dXstep) < max_X - 1:
-                info(5, "Solving at depth X =", r.t, condition=(i % 5000) == 0)
-                r.integrate(r.t + dXstep)
-                i += 1
-            if r.t < max_X:
-                r.integrate(max_X)
-            # Do last step to make sure the rational number max_X is reached
-            r.integrate(max_X)
-        else:
-            for i, Xi in enumerate(int_grid):
-                info(5, 'integrating at X =', Xi, condition=i % 10 == 0)
+#     start = time()
+#     if int_grid is None:
+#         i = 0
+#         while r.successful() and (r.t + dXstep) < max_X - 1:
+#             info(5, "Solving at depth X =", r.t, condition=(i % 5000) == 0)
+#             r.integrate(r.t + dXstep)
+#             i += 1
+#         if r.t < max_X:
+#             r.integrate(max_X)
+#         # Do last step to make sure the rational number max_X is reached
+#         r.integrate(max_X)
+#     else:
+#         for i, Xi in enumerate(int_grid):
+#             info(5, 'integrating at X =', Xi, condition=i % 10 == 0)
 
-                while r.successful() and (r.t + dXstep) < Xi:
-                    r.integrate(r.t + dXstep)
+#             while r.successful() and (r.t + dXstep) < Xi:
+#                 r.integrate(r.t + dXstep)
 
-                # Make sure the integrator arrives at requested step
-                r.integrate(Xi)
-                # Store the solution on grid
-                grid_sol.append(r.y)
+#             # Make sure the integrator arrives at requested step
+#             r.integrate(Xi)
+#             # Store the solution on grid
+#             grid_sol.append(r.y)
 
-        info(2,
-             'time elapsed during integration: {1} sec'.format(time() - start))
+#     info(2,
+#             'time elapsed during integration: {1} sec'.format(time() - start))
 
-        self.solution = r.y
-        self.grid_sol = grid_sol
+#     self.solution = r.y
+#     self.grid_sol = grid_sol
