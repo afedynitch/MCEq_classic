@@ -4,15 +4,15 @@ from ctypes import cdll, Structure, c_long, c_int, \
                    c_double, pointer, byref, \
                    POINTER
 import copy
-from c_msis_interface import *
+from .c_msis_interface import *
 
-output = [nrlmsise_output() for i in xrange(17)]
-inp = [nrlmsise_input() for i in xrange(17)]
+output = [nrlmsise_output() for i in range(17)]
+inp = [nrlmsise_input() for i in range(17)]
 flags = nrlmsise_flags()
 aph = ap_array()
 
 # Inp values
-for i in xrange(7):
+for i in range(7):
     aph.a[i] = c_double(100.)
 
 flags.switches[0] = c_int(0)
@@ -20,7 +20,7 @@ flags.switches[0] = c_int(0)
 for i in range(1, 24):
     flags.switches[i] = c_int(1)
 
-for i in xrange(17):
+for i in range(17):
     inp[i].doy = c_int(172)  # Day of year
     inp[i].year = c_int(0)  # No effect
     inp[i].sec = c_double(29000.)
@@ -50,7 +50,7 @@ inp[8].f107 = c_double(180.)
 inp[9].ap = c_double(40.)
 inp[15].ap_a = pointer(aph)
 inp[16].ap_a = pointer(aph)
-for i in xrange(15):
+for i in range(15):
     #     msis.gtd7(byref(inp[i]), byref(flags), byref(output[i]))
     msis.gtd7_py(inp[i].year, inp[i].doy, inp[i].sec, inp[i].alt, inp[i].g_lat,
                  inp[i].g_long, inp[i].lst, inp[i].f107A, inp[i].f107,
@@ -63,72 +63,72 @@ for i in range(15, 17):
 #     msis.gtd7(byref(inp[i]), byref(flags), byref(output[i]))
 # output type 1
 outbuf = ""
-for i in xrange(17):
-    for j in xrange(9):
+for i in range(17):
+    for j in range(9):
         outbuf += '{0:E} '.format(output[i].d[j])
     outbuf += '{0:E} '.format(output[i].t[0])
     outbuf += '{0:E} \n'.format(output[i].t[1])
 
 # output type 2
-for i in xrange(3):
+for i in range(3):
     outbuf += "\n"
     outbuf += "\nDAY   "
-    for j in xrange(5):
+    for j in range(5):
         outbuf += "         {0:3}".format(inp[i * 5 + j].doy.value)
     outbuf += "\nUT    "
-    for j in xrange(5):
+    for j in range(5):
         outbuf += "       {0:5.0f}".format(inp[i * 5 + j].sec.value)
     outbuf += "\nALT   "
-    for j in xrange(5):
+    for j in range(5):
         outbuf += "        {0:4.0f}".format(inp[i * 5 + j].alt.value)
     outbuf += "\nLAT   "
-    for j in xrange(5):
+    for j in range(5):
         outbuf += "         {0:3.0f}".format(inp[i * 5 + j].g_lat.value)
     outbuf += "\nLONG  "
-    for j in xrange(5):
+    for j in range(5):
         outbuf += "         {0:3.0f}".format(inp[i * 5 + j].g_long.value)
     outbuf += "\nLST   "
-    for j in xrange(5):
+    for j in range(5):
         outbuf += "       {0:5.0f}".format(inp[i * 5 + j].lst.value)
     outbuf += "\nF107A "
-    for j in xrange(5):
+    for j in range(5):
         outbuf += "         {0:3.0f}".format(inp[i * 5 + j].f107A.value)
     outbuf += "\nF107  "
-    for j in xrange(5):
+    for j in range(5):
         outbuf += "         {0:3.0f}".format(inp[i * 5 + j].f107.value)
     outbuf += "\n\n"
     outbuf += "\nTINF  "
-    for j in xrange(5):
+    for j in range(5):
         outbuf += "     {0:7.2f}".format(output[i * 5 + j].t[0])
     outbuf += "\nTG    "
-    for j in xrange(5):
+    for j in range(5):
         outbuf += "     {0:7.2f}".format(output[i * 5 + j].t[1])
     outbuf += "\nHE    "
-    for j in xrange(5):
+    for j in range(5):
         outbuf += "   {0:1.3e}".format(output[i * 5 + j].d[0])
     outbuf += "\nO     "
-    for j in xrange(5):
+    for j in range(5):
         outbuf += "   {0:1.3e}".format(output[i * 5 + j].d[1])
     outbuf += "\nN2    "
-    for j in xrange(5):
+    for j in range(5):
         outbuf += "   {0:1.3e}".format(output[i * 5 + j].d[2])
     outbuf += "\nO2    "
-    for j in xrange(5):
+    for j in range(5):
         outbuf += "   {0:1.3e}".format(output[i * 5 + j].d[3])
     outbuf += "\nAR    "
-    for j in xrange(5):
+    for j in range(5):
         outbuf += "   {0:1.3e}".format(output[i * 5 + j].d[4])
     outbuf += "\nH     "
-    for j in xrange(5):
+    for j in range(5):
         outbuf += "   {0:1.3e}".format(output[i * 5 + j].d[6])
     outbuf += "\nN     "
-    for j in xrange(5):
+    for j in range(5):
         outbuf += "   {0:1.3e}".format(output[i * 5 + j].d[7])
     outbuf += "\nANM 0 "
-    for j in xrange(5):
+    for j in range(5):
         outbuf += "   {0:1.3e}".format(output[i * 5 + j].d[8])
     outbuf += "\nRHO   "
-    for j in xrange(5):
+    for j in range(5):
         outbuf += "   {0:1.3e}".format(output[i * 5 + j].d[5])
     outbuf += "\n"
 outbuf += "\n"

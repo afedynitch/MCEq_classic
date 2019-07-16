@@ -1,4 +1,5 @@
 from MCEq.misc import info
+import six
 import c_msis_interface as cmsis
 
 
@@ -94,7 +95,7 @@ class cNRLMSISE00(NRLMSISE00Base):
             self.flags.switches[i] = cmsis.c_int(1)
 
     def set_location(self, tag):
-        if tag not in self.locations.keys():
+        if tag not in six.keys(self.locations):
             raise Exception(
                 "NRLMSISE00::set_location(): Unknown location tag '{0}'.".
                 format(tag))
@@ -112,7 +113,7 @@ class cNRLMSISE00(NRLMSISE00Base):
         self.inp.g_long = cmsis.c_double(longitude)
 
     def set_season(self, tag):
-        if tag not in self.month2doy.keys():
+        if tag not in self.month2doy:
             raise Exception("NRLMSISE00::set_location(): Unknown season tag.")
         info(5, 'Season', tag, 'doy=', self.month2doy[tag])
         self.inp.doy = self.month2doy[tag]
