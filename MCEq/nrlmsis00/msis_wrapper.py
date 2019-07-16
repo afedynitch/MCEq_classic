@@ -1,6 +1,6 @@
 from MCEq.misc import info
 import six
-import c_msis_interface as cmsis
+import nrlmsis00.c_msis_interface as cmsis
 
 
 class NRLMSISE00Base(object):

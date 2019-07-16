@@ -1,5 +1,5 @@
 #! /usr/bin/env python
-
+from __future__ import print_function
 from ctypes import cdll, Structure, c_long, c_int, \
                    c_double, pointer, byref, \
                    POINTER
@@ -132,4 +132,4 @@ for i in range(3):
         outbuf += "   {0:1.3e}".format(output[i * 5 + j].d[5])
     outbuf += "\n"
 outbuf += "\n"
-print outbuf
+print(outbuf)
