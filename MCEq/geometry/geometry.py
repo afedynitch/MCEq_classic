@@ -9,7 +9,7 @@ the geometry of the cascade trajectory.
 import sys
 import numpy as np
 from MCEq.misc import theta_rad
-from mceq_config import config
+import mceq_config as config
 
 sys.path.append('..')
 
@@ -111,9 +111,9 @@ class EarthGeometry(object):
 
     def __init__(self):
 
-        self.h_obs = config['h_obs'] * 1e2  # cm
-        self.h_atm = config['h_atm'] * 1e2  # cm
-        self.r_E = config['r_E'] * 1e2  # cm
+        self.h_obs = config.h_obs * 1e2  # cm
+        self.h_atm = config.h_atm * 1e2  # cm
+        self.r_E = config.r_E * 1e2  # cm
         self.r_top = self.r_E + self.h_atm
         self.r_obs = self.r_E + self.h_obs
 

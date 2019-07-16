@@ -14,7 +14,7 @@ validating data structures:
 import six
 from math import copysign
 import numpy as np
-from mceq_config import config
+import mceq_config as config
 from MCEq.misc import info, print_in_rows, getAZN
 
 from particletools.tables import PYTHIAParticleData
@@ -110,7 +110,7 @@ class MCEqParticle(object):
         self.E_crit = 0
 
         # # TODO: move this check to internal variable self.is_stable, or so
-        # # if pdg_id in config["adv_set"]["disable_decays"]:
+        # # if pdg_id in config.adv_set["disable_decays"]:
         # #     _pdata.force_stable(self.pdg_id)
 
         # Energy and cross section dependent inits
@@ -366,7 +366,7 @@ class MCEqParticle(object):
           (float): :math:`\\frac{1}{\\lambda_{int}}` in cm**2/g
         """
 
-        m_target = config['A_target'] * 1.672621 * 1e-24  # <A> * m_proton [g]
+        m_target = config.A_target * 1.672621 * 1e-24  # <A> * m_proton [g]
         return self.cs / m_target
 
     def _assign_hadr_dist_idx(self, child, projidx, chidx, cmat):
@@ -477,7 +477,7 @@ class MCEqParticle(object):
             import pickle
             from os.path import join
             self._ptav_sib23c = pickle.load(
-                open(join(config['data_dir'], 'sibyll23c_aux.ppd'), 'rb'))[0]
+                open(join(config.data_dir, 'sibyll23c_aux.ppd'), 'rb'))[0]
 
         def xF(xL, Elab, ppdg):
 
@@ -537,7 +537,7 @@ class MCEqParticle(object):
 
         Class attributes :attr:`is_mixed`, :attr:`E_mix`, :attr:`mix_idx`,
         :attr:`is_resonance` are calculated here. If the option `no_mixing`
-        is set in config['adv_config'] particle is forced to be a resonance
+        is set in config.adv_config particle is forced to be a resonance
         or hadron behavior.
 
         Args:
@@ -546,22 +546,22 @@ class MCEqParticle(object):
                                decay length)
         """
 
-        cross_over = config["hybrid_crossover"]
-        max_density = config['max_density']
-        no_mix = config["adv_set"]['no_mixing']
+        cross_over = config.hybrid_crossover
+        max_density = config.max_density
+        no_mix = False
 
         d = self._energy_grid.d
 
         inv_intlen = self.inverse_interaction_length()
         inv_declen = self.inverse_decay_length()
-
         if (not np.any(np.nan_to_num(inv_declen) > 0.) or abs(
-                self.pdg_id[0]) in config["adv_set"]["exclude_from_mixing"]):
+                self.pdg_id[0]) in config.adv_set["exclude_from_mixing"] or
+                config.adv_set['no_mixing']):
             self.mix_idx = 0
             self.is_mixed = False
             self.is_resonance = False
             return
-        if (np.abs(self.pdg_id[0]) in config["adv_set"]["force_resonance"]
+        if (np.abs(self.pdg_id[0]) in config.adv_set["force_resonance"]
                 or (np.all(inv_declen == 0.) and not self.is_lepton)):
             threshold = 0.
         elif np.any(inv_intlen > 0.):
@@ -957,7 +957,7 @@ class ParticleManager(object):
 
         info(10, 'Restoring tracking particle setup')
 
-        if not self.tracking_relations and config["enable_default_tracking"]:
+        if not self.tracking_relations and config.enable_default_tracking:
             self._init_default_tracking()
             return
 
@@ -992,7 +992,7 @@ class ParticleManager(object):
         # Track prompt leptons
         self.track_leptons_from([
             p.pdg_id
-            for p in self.all_particles if p.ctau < config["prompt_ctau"]
+            for p in self.all_particles if p.ctau < config.prompt_ctau
         ],
                                 'prcas_',
                                 exclude_em=True,

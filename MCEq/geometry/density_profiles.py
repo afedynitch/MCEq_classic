@@ -37,7 +37,7 @@ import numpy as np
 from MCEq.misc import theta_deg, theta_rad, info
 from numba import jit, double
 
-from mceq_config import config
+import mceq_config as config
 
 
 class EarthsAtmosphere():
@@ -638,11 +638,11 @@ class MSIS00Atmosphere(EarthsAtmosphere):
 
         self._msis = cNRLMSISE00()
 
-        self.init_parameters(location, season, doy)
+        self.init_parameters(location, season, doy, use_loc_altitudes)
 
         EarthsAtmosphere.__init__(self)
 
-    def init_parameters(self, location, season, use_loc_altitudes):
+    def init_parameters(self, location, season, doy, use_loc_altitudes):
         """Sets location and season in :class:`NRLMSISE-00`.
 
         Translates location and season into day of year
@@ -819,7 +819,7 @@ class AIRSAtmosphere(EarthsAtmosphere):
 
             if self.extrapolate:
                 #Extrapolate using msis
-                h_extra = np.linspace(h_vec[-1], config['h_atm'] * 1e2, 250)
+                h_extra = np.linspace(h_vec[-1], config.h_atm * 1e2, 250)
                 msis._msis.set_doy(self._get_y_doy(date)[1] - 1)
                 msis_extra_d = np.array([msis.get_density(h) for h in h_extra])
                 msis_extra_t = np.array(
@@ -966,7 +966,7 @@ class MSIS00IceCubeCentered(MSIS00Atmosphere):
         Returns:
           float: latitude of the impact point in degrees
         """
-        r = config['r_E']
+        r = config.r_E
         d = 1948  # m
 
         theta_rad = det_zenith_deg / 180. * np.pi
@@ -1018,9 +1018,9 @@ class GeneralizedTarget(object):
 
     def __init__(
             self,
-            len_target=config['len_target'] * 1e2,  # cm
-            env_density=config['env_density'],  # g/cm3
-            env_name=config['env_name']):
+            len_target=config.len_target * 1e2,  # cm
+            env_density=config.env_density,  # g/cm3
+            env_name=config.env_name):
 
         self.len_target = len_target
         self.env_density = env_density

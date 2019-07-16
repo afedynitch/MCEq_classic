@@ -17,7 +17,7 @@ validating data structures:
 import numpy as np
 import h5py
 from collections import defaultdict
-from mceq_config import config
+import mceq_config as config
 from os.path import join, isfile
 from misc import normalize_hadronic_model_name, is_charm_pdgid, info
 
@@ -107,18 +107,18 @@ class HDF5Backend(object):
 
     def __init__(self):
 
-        info(2, 'Opening HDF5 file', config['mceq_db_fname'])
-        self.had_fname = join(config['data_dir'], config['mceq_db_fname'])
+        info(2, 'Opening HDF5 file', config.mceq_db_fname)
+        self.had_fname = join(config.data_dir, config.mceq_db_fname)
         if not isfile(self.had_fname):
             raise Exception(
                 'MCEq DB file {0} not found in "data" directory.'.format(
-                    config['mceq_db_fname']))
+                    config.mceq_db_fname))
 
-        self.em_fname = join(config['data_dir'], config['em_db_fname'])
-        if config["enable_em"] and not isfile(self.had_fname):
+        self.em_fname = join(config.data_dir, config.em_db_fname)
+        if config.enable_em and not isfile(self.had_fname):
             raise Exception(
                 'Electromagnetic DB file {0} not found in "data" directory.'.
-                format(config['em_db_fname']))
+                format(config.em_db_fname))
 
         with h5py.File(self.had_fname, 'r') as mceq_db:
             from MCEq.misc import energy_grid
@@ -138,11 +138,11 @@ class HDF5Backend(object):
     def _eval_energy_cuts(self, e_centers):
         min_idx, max_idx = 0, len(e_centers)
         slice0, slice1 = None, None
-        if config['e_min'] is not None:
-            min_idx = slice0 = np.argmin(np.abs(e_centers - config['e_min']))
-        if config['e_max'] is not None:
+        if config.e_min is not None:
+            min_idx = slice0 = np.argmin(np.abs(e_centers - config.e_min))
+        if config.e_max is not None:
             max_idx = slice1 = np.argmin(
-                np.abs(e_centers - config['e_max'])) + 1
+                np.abs(e_centers - config.e_max)) + 1
         return min_idx, max_idx, slice(slice0, slice1)
 
     def _gen_db_dictionary(self, hdf_root, indptrs, equivalences={}):
@@ -168,7 +168,7 @@ class HDF5Backend(object):
             model_particles = sorted(
                 list(set(hdf_root.attrs['tuple_idcs'].flatten().tolist())))
 
-        exclude = config['adv_set']["disabled_particles"]
+        exclude = config.adv_set["disabled_particles"]
         read_idx = 0
         available_parents = [
             (pdg, parity)
@@ -212,7 +212,7 @@ class HDF5Backend(object):
                  'This parent {0} is used for interactions of'.format(
                      parent_pdg[0]), [p[0] for p in eqv_lookup[parent_pdg]],
                  condition=len(equivalences) > 0)
-            if config["assume_nucleon_interactions_for_exotics"]:
+            if config.assume_nucleon_interactions_for_exotics:
                 for eqv_parent in eqv_lookup[parent_pdg]:
                     if eqv_parent[0] not in model_particles:
                         info(10, 'Skip equiv. parent', eqv_parent, 'from',
@@ -269,7 +269,7 @@ class HDF5Backend(object):
                 equivalences=eqv)
 
         # Append electromagnetic interaction matrices from EmCA
-        if config['enable_em']:
+        if config.enable_em:
             with h5py.File(self.em_fname, 'r') as em_db:
                 info(2, 'Injecting EmCA matrices into interaction_db.')
                 self._check_subgroup_exists(em_db, 'electromagnetic')
@@ -299,7 +299,7 @@ class HDF5Backend(object):
                 mceq_db['decays'][decay_dset_name],
                 mceq_db['decays'][decay_dset_name + '_indptrs'])
 
-            if config["muon_helicity_dependence"]:
+            if config.muon_helicity_dependence:
                 info(2, 'Using helicity dependent decays.')
                 custom_index = self._gen_db_dictionary(
                     mceq_db['decays']['custom_decays'],
@@ -346,7 +346,7 @@ class HDF5Backend(object):
                 index_d[p] = cs_data[self._cuts, ip]
 
         # Append electromagnetic interaction cross sections from EmCA
-        if config['enable_em']:
+        if config.enable_em:
             with h5py.File(self.em_fname, 'r') as em_db:
                 info(2, 'Injecting EmCA matrices into interaction_db.')
                 self._check_subgroup_exists(em_db, 'electromagnetic')
@@ -373,7 +373,7 @@ class HDF5Backend(object):
             for pstr in cl_db.keys():
                 for hel in [0, 1, -1]:
                     index_d[(int(pstr), hel)] = cl_db[pstr][self._cuts]
-            if config['enable_em']:
+            if config.enable_em:
                 with h5py.File(self.em_fname, 'r') as em_db:
                     info(2, 'Injecting EmCA matrices into interaction_db.')
                     self._check_subgroup_exists(em_db, 'electromagnetic')
@@ -449,21 +449,21 @@ class Interactions(object):
         if parent_list is not None:
             self.parents = [p for p in self.parents if p in parent_list]
             regenerate_index = True
-        if (config['adv_set']['disable_charm_pprod']):
+        if (config.adv_set['disable_charm_pprod']):
             self.parents = [
                 p for p in self.parents if not is_charm_pdgid(p[0])
             ]
             regenerate_index = True
-        if (config['adv_set']['disable_interactions_of_unstable']):
+        if (config.adv_set['disable_interactions_of_unstable']):
             self.parents = [
                 p for p in self.parents
                 if p[0] not in [2212, 2112, -2212, -2112]
             ]
             regenerate_index = True
-        if (config['adv_set']['allowed_projectiles']):
+        if (config.adv_set['allowed_projectiles']):
             self.parents = [
                 p for p in self.parents
-                if p[0] in config['adv_set']['allowed_projectiles']
+                if p[0] in config.adv_set['allowed_projectiles']
             ]
             regenerate_index = True
         if regenerate_index:
@@ -476,7 +476,7 @@ class Interactions(object):
                 self.particles += self.relations[p]
             self.particles = sorted(list(set(self.particles)))
 
-        if config['adv_set']['disable_direct_leptons']:
+        if config.adv_set['disable_direct_leptons']:
             # info(5, 'Hotfix for DPMJET, no direct leptons')
             for p in self.relations.keys():
                 self.relations[p] = [
@@ -535,7 +535,7 @@ class Interactions(object):
         mpli = self.mod_pprod
         pstup = (prim_pdg, sec_pdg)
 
-        if config['use_isospin_sym'] and prim_pdg not in [2212, 2112]:
+        if config.use_isospin_sym and prim_pdg not in [2212, 2112]:
             raise Exception('Unsupported primary for isospin symmetries.')
 
         if (x_func.__name__, args) in mpli[(pstup)]:
@@ -563,7 +563,7 @@ class Interactions(object):
         info(5, 'modification "strength"',
              np.sum(kmat) / np.count_nonzero(kmat))
 
-        if not config['use_isospin_sym']:
+        if not config.use_isospin_sym:
             return True
 
         prim_pdg, symm_pdg = 2212, 2112
@@ -672,7 +672,7 @@ class Interactions(object):
 
         m = self.index_d[(parent, child)]
 
-        if config['adv_set']['disable_leading_mesons'] and abs(child) < 2000 \
+        if config.adv_set['disable_leading_mesons'] and abs(child) < 2000 \
                 and (parent, -child) in self.index_d.keys():
             m_anti = self.index_d[(parent, -child)]
             ie = 50
@@ -757,10 +757,10 @@ class Decays(object):
             self.parents = sorted(list(set(plist)))
             regenerate_index = True
 
-        if (config['adv_set']['disable_decays']):
+        if (config.adv_set['disable_decays']):
             self.parents = [
                 p for p in self.parents
-                if p[0] not in config['adv_set']['disable_decays']
+                if p[0] not in config.adv_set['disable_decays']
             ]
             regenerate_index = True
 

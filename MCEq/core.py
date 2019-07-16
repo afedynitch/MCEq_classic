@@ -23,13 +23,13 @@ The preferred way to instantiate :class:`MCEq.core.MCEqRun` is::
 
 """
 import os
+import sys
 from time import time
 import numpy as np
-from mceq_config import config
+import mceq_config as config
 from MCEq.misc import normalize_hadronic_model_name, info, energy_grid
 from MCEq.particlemanager import ParticleManager
 import MCEq.data
-
 
 class MCEqRun(object):
     """Main class for handling the calculation.
@@ -64,24 +64,20 @@ class MCEqRun(object):
         products will be scored in the special ``obs_`` categories
     """
 
-    def __init__(self, interaction_model, density_model, primary_model,
-                 theta_deg, **mceq_config):
-
-        # Overwrite config dictionary
-        config = mceq_config
+    def __init__(self, interaction_model, primary_model, theta_deg, **kwargs):
 
         self.mceq_db = MCEq.data.HDF5Backend()
 
-        if os.path.isfile(config['MKL_path']):
+        if os.path.isfile(config.mkl_path):
             from ctypes import cdll, c_int, byref
-            mkl = cdll.LoadLibrary(config['MKL_path'])
+            mkl = cdll.LoadLibrary(config.mkl_path)
             # Set number of threads
-            mkl.mkl_set_num_threads(byref(c_int(config['MKL_threads'])))
+            mkl.mkl_set_num_threads(byref(c_int(config.MKL_threads)))
 
         interaction_model = normalize_hadronic_model_name(interaction_model)
 
         # Save atmospheric parameters
-        self.density_config = density_model
+        self.density_config = kwargs.pop('density_model', config.density_model)
         self.theta_deg = theta_deg
 
         #: Interface to interaction tables of the HDF5 database
@@ -119,11 +115,11 @@ class MCEqRun(object):
 
         # Set interaction model and compute grids and matrices
         self.set_interaction_model(interaction_model,
-                                   particle_list=mceq_config.pop(
+                                   particle_list=kwargs.pop(
                                        'particle_list', None))
 
         # Default GPU device id for CUDA
-        self.cuda_device = config['GPU_id'] if 'GPU_id' in mceq_config else 0
+        self.cuda_device = kwargs.pop('cuda_gpu_id', config.cuda_gpu_id)
 
         #Print particle list after tracking particles have been initialized
         self.pman.print_particle_tables(2)
@@ -167,7 +163,7 @@ class MCEqRun(object):
                      mag=0.,
                      grid_idx=None,
                      integrate=False,
-                     return_as=config['return_as']):
+                     return_as=config.return_as):
         """Retrieves solution of the calculation on the energy grid.
 
         Some special prefixes are accepted for lepton names:
@@ -223,7 +219,7 @@ class MCEqRun(object):
                     continue
                 result += sol[ref[prefix + ls].lidx:ref[prefix + ls].uidx]
                 nsuccess += 1
-            if nsuccess == 0 and config["excpt_on_missing_particle"]:
+            if nsuccess == 0 and config.excpt_on_missing_particle:
                 raise Exception(
                     'Requested particle {0} not found.'.format(particle_name))
             return result
@@ -684,7 +680,7 @@ class MCEqRun(object):
           kwargs (dict): Arguments are passed directly to the solver methods.
 
         """
-        info(2, "Launching {0} solver".format(config['integrator']))
+        info(2, "Launching {0} solver".format(config.integrator))
 
         # Calculate integration path if not yet happened
         self._calculate_integration_path(int_grid, grid_var)
@@ -698,12 +694,12 @@ class MCEqRun(object):
 
         start = time()
 
-        if config['kernel_config'] == 'numpy':
+        if config.kernel_config == 'numpy':
             kernel = MCEq.solvers.solv_numpy
             args = (nsteps, dX, rho_inv, self.int_m, self.dec_m, phi0,
                     grid_idcs)
 
-        elif (config['kernel_config'] == 'CUDA'):
+        elif (config.kernel_config == 'CUDA'):
             kernel = MCEq.solvers.solv_CUDA_sparse
             try:
                 self.cuda_context.set_matrices(self.int_m, self.dec_m)
@@ -713,7 +709,7 @@ class MCEqRun(object):
                     self.int_m, self.dec_m, device_id=self.cuda_device)
             args = (nsteps, dX, rho_inv, self.cuda_context, phi0, grid_idcs)
 
-        elif (config['kernel_config'] == 'MKL'):
+        elif (config.kernel_config == 'MKL'):
             kernel = MCEq.solvers.solv_MKL_sparse
             args = (nsteps, dX, rho_inv, self.int_m, self.dec_m, phi0,
                     grid_idcs)
@@ -721,8 +717,8 @@ class MCEqRun(object):
         else:
             raise Exception(
                 "Unsupported integrator settings '{0}/{1}'.".format(
-                    'sparse' if config['use_sparse'] else 'dense',
-                    config['kernel_config']))
+                    'sparse' if config.use_sparse else 'dense',
+                    config.kernel_config))
 
         self._solution, self.grid_sol = kernel(*args)
 
@@ -759,15 +755,15 @@ class MCEqRun(object):
 
         # The factor 0.95 means 5% inbound from stability margin of the
         # Euler intergrator.
-        if (max_ldec * ri(config['max_density']) > max_lint
-                and config["leading_process"] == 'decays'):
+        if (max_ldec * ri(config.max_density) > max_lint
+                and config.leading_process == 'decays'):
             info(3, "using decays as leading eigenvalues")
             delta_X = lambda X: 0.95 / (max_ldec * ri(X))
         else:
             info(2, "using interactions as leading eigenvalues")
             delta_X = lambda X: 0.95 / max_lint
 
-        dXmax = config['dXmax']
+        dXmax = config.dXmax
         while X < max_X:
             dX = min(delta_X(X), dXmax)
             if (np.any(int_grid) and (grid_step < len(int_grid))
@@ -965,12 +961,12 @@ class MatrixBuilder(object):
                 self.C_blocks[idx] *= parent.inverse_interaction_length()
 
             if child.mceqidx == parent.mceqidx and parent.has_contloss:
-                if config["enable_muon_energy_loss"] and abs(
+                if config.enable_muon_energy_loss and abs(
                         parent.pdg_id[0]) == 13:
                     info(5, 'Cont. loss for', parent.name)
                     self.C_blocks[idx] += self.cont_loss_operator(
                         parent.pdg_id)
-                if config["enable_em_ion"] and abs(parent.pdg_id[0]) == 11:
+                if config.enable_em_ion and abs(parent.pdg_id[0]) == 11:
                     info(5, 'Cont. loss for', parent.name)
                     self.C_blocks[idx] += self.cont_loss_operator(
                         parent.pdg_id)
@@ -1016,14 +1012,14 @@ class MatrixBuilder(object):
         """Averages the continuous loss operator by performing
         1/max_step explicit euler steps"""
 
-        n_steps = int(1. / config['loss_step_for_average'])
+        n_steps = int(1. / config.loss_step_for_average)
         info(
             10,
             'Averaging continuous loss using {0} intermediate steps.'.format(
                 n_steps))
 
         op_step = np.eye(
-            self._energy_grid.d) + op_mat * config['loss_step_for_average']
+            self._energy_grid.d) + op_mat * config.loss_step_for_average
         return np.linalg.matrix_power(op_step, n_steps) - np.eye(
             self._energy_grid.d)
 
@@ -1033,7 +1029,7 @@ class MatrixBuilder(object):
         op_mat = -np.diag(1 / self._energy_grid.c).dot(
             self.op_matrix.dot(np.diag(self.pman[pdg_id].dEdX)))
 
-        if config['average_loss_operator']:
+        if config.average_loss_operator:
             return self._average_operator(op_mat)
         else:
             return op_mat
@@ -1089,7 +1085,7 @@ class MatrixBuilder(object):
                 p._assign_decay_idx(d, idcs, d.hadridx, dprop)
                 propmat[(d.mceqidx, p_orig.mceqidx)] += dprop.dot(pprod_mat)
 
-            if config["debug_level"] >= 20:
+            if config.debug_level >= 20:
                 pstr = 'res'
                 dstr = 'Mchain'
                 if idcs == p.hadridx:

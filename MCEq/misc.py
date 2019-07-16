@@ -12,13 +12,14 @@ Some helper functions and plotting features are collected in this module.
 from __future__ import print_function
 from collections import namedtuple
 import numpy as np
-from mceq_config import config
+import mceq_config as config
 
 #: Energy grid (centers, bind widths, dimension)
-energy_grid = namedtuple("energy_grid",("c", "b", "w", "d"))
+energy_grid = namedtuple("energy_grid", ("c", "b", "w", "d"))
 
 #: Matrix with x_lab=E_child/E_parent values
 _xmat = None
+
 
 def normalize_hadronic_model_name(name):
     """Converts hadronic model name into standard form"""
@@ -36,6 +37,7 @@ def theta_rad(theta):
     """
     return np.deg2rad(theta)
 
+
 def gen_xmat(energy_grid):
     """Generates x_lab matrix for a given energy grid"""
     global _xmat
@@ -52,7 +54,7 @@ def print_in_rows(min_dbg_level, str_list, n_cols=5):
     """Prints contents of a list in rows `n_cols`
     entries per row.
     """
-    if min_dbg_level > config["debug_level"]:
+    if min_dbg_level > config.debug_level:
         return
 
     l = len(str_list)
@@ -60,11 +62,12 @@ def print_in_rows(min_dbg_level, str_list, n_cols=5):
     n_rest = l % n_cols
     print_str = '\n'
     for i in range(n_full_length):
-        print_str += ('"{:}", ' * n_cols
-                      ).format(*str_list[i * n_cols:(i + 1) * n_cols]) + '\n'
+        print_str += ('"{:}", ' * n_cols).format(*str_list[i * n_cols:(i + 1) *
+                                                           n_cols]) + '\n'
     print_str += ('"{:}", ' * n_rest).format(*str_list[-n_rest:])
 
     print(print_str.strip()[:-1])
+
 
 def is_charm_pdgid(pdgid):
     """Returns True if particle ID belongs to a heavy (charm) hadron."""
@@ -72,11 +75,13 @@ def is_charm_pdgid(pdgid):
     return ((abs(pdgid) > 400 and abs(pdgid) < 500)
             or (abs(pdgid) > 4000 and abs(pdgid) < 5000))
 
+
 def _get_closest(value, in_list):
     """Returns the closes value to 'value' from given list."""
 
     minindex = np.argmin(np.abs(in_list - value * np.ones(len(in_list))))
     return minindex, in_list[minindex]
+
 
 def getAZN(pdg_id):
     """Returns mass number :math:`A`, charge :math:`Z` and neutron
@@ -93,17 +98,18 @@ def getAZN(pdg_id):
     """
     Z, A = 1, 1
     if pdg_id < 2000:
-        return 0,0,0
+        return 0, 0, 0
     elif pdg_id == 2112:
-        return 1,0,1
+        return 1, 0, 1
     elif pdg_id == 2212:
-        return 1,1,0
+        return 1, 1, 0
     elif pdg_id > 1000000000:
         A = pdg_id % 1000 / 10
         Z = pdg_id % 1000000 / 10000
         return A, Z, A - Z
     else:
         return 1, 0, 0
+
 
 def getAZN_corsika(corsikaid):
     """Returns mass number :math:`A`, charge :math:`Z` and neutron
@@ -126,6 +132,7 @@ def getAZN_corsika(corsikaid):
 
     return A, Z, A - Z
 
+
 def corsikaid2pdg(corsika_id):
     """Conversion of CORSIKA nuclear code to PDG nuclear code"""
     if corsika_id in [101, 14]:
@@ -133,12 +140,13 @@ def corsikaid2pdg(corsika_id):
     elif corsika_id in [100, 13]:
         return 2112
     else:
-        A,Z, _ = getAZN_corsika(corsika_id)
+        A, Z, _ = getAZN_corsika(corsika_id)
         # 10LZZZAAAI
         pdg_id = 1000000000
-        pdg_id += 10*A
-        pdg_id += 10000*Z
+        pdg_id += 10 * A
+        pdg_id += 10000 * Z
         return pdg_id
+
 
 def pdg2corsikaid(pdg_id):
     """Conversion from nuclear PDG ID to CORSIKA ID.
@@ -153,7 +161,8 @@ def pdg2corsikaid(pdg_id):
     A = pdg_id % 1000 / 10
     Z = pdg_id % 1000000 / 10000
 
-    return A*100 + Z
+    return A * 100 + Z
+
 
 def caller_name(skip=2):
     """Get a name of a caller in the format module.class.method
@@ -176,7 +185,7 @@ def caller_name(skip=2):
 
     name = []
 
-    if config["print_module"]:
+    if config.print_module:
         module = inspect.getmodule(parentframe)
         # `modname` can be None when frame is executed directly in console
         if module:
@@ -201,7 +210,7 @@ def caller_name(skip=2):
 
 
 def info(min_dbg_level, *message, **kwargs):
-    """Print to console if `min_debug_level <= config["debug_level"]`
+    """Print to console if `min_debug_level <= config.debug_level`
 
     The fuction determines automatically the name of caller and appends
     the message to it. Message can be a tuple of strings or objects
@@ -221,13 +230,12 @@ def info(min_dbg_level, *message, **kwargs):
     condition = kwargs.pop('condition', True)
     blank_caller = kwargs.pop('blank_caller', False)
     no_caller = kwargs.pop('no_caller', False)
-    if config["override_debug_fcn"] and min_dbg_level < config[
-            "override_max_level"]:
+    if config.override_debug_fcn and min_dbg_level < config.override_max_level:
         fcn_name = caller_name(skip=2).split('::')[-1].split('():')[0]
-        if fcn_name in config["override_debug_fcn"]:
+        if fcn_name in config.override_debug_fcn:
             min_dbg_level = 0
 
-    if condition and min_dbg_level <= config["debug_level"]:
+    if condition and min_dbg_level <= config.debug_level:
         message = [str(m) for m in message]
         cname = caller_name() if not no_caller else ''
         if blank_caller: cname = len(cname) * ' '

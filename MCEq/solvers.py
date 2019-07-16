@@ -43,7 +43,7 @@ The functions use different libraries for sparse and dense linear algebra (BLAS)
 
 """
 import numpy as np
-from mceq_config import config
+import mceq_config as config
 from MCEq.misc import info
 
 
@@ -95,9 +95,9 @@ def solv_numpy(nsteps, dX, rho_inv, int_m, dec_m, phi, grid_idcs):
 class CUDASparseContext(object):
     def __init__(self, int_m, dec_m, device_id=0):
 
-        if config['CUDA_fp_precision'] == 32:
+        if config.CUDA_fp_precision == 32:
             self.fl_pr = np.float32
-        elif config['CUDA_fp_precision'] == 64:
+        elif config.CUDA_fp_precision == 64:
             self.fl_pr = np.float64
         else:
             raise Exception(
@@ -115,7 +115,7 @@ class CUDASparseContext(object):
             raise Exception("solv_CUDA_sparse(): Numbapro CUDA libaries not " +
                             "installed.\nCan not use GPU.")
 
-        cp.cuda.Device(config['CUDA_GPU_ID']).use()
+        cp.cuda.Device(config.cuda_gpu_id).use()
         self.cubl_handle = self.cubl.create()
         self.set_matrices(int_m, dec_m)
 
@@ -222,7 +222,7 @@ def solv_MKL_sparse(nsteps, dX, rho_inv, int_m, dec_m, phi, grid_idcs):
     from ctypes import cdll, c_int, c_char, POINTER, byref
 
     try:
-        mkl = cdll.LoadLibrary(config['MKL_path'])
+        mkl = cdll.LoadLibrary(config.mkl_path)
     except OSError:
         raise Exception("solv_MKL_sparse(): MKL runtime library not " +
                         "found. Please check path.")
@@ -238,7 +238,7 @@ def solv_MKL_sparse(nsteps, dX, rho_inv, int_m, dec_m, phi, grid_idcs):
     np_fl = np.float64
 
     # Set number of threads
-    mkl.mkl_set_num_threads(byref(c_int(config['MKL_threads'])))
+    mkl.mkl_set_num_threads(byref(c_int(config.MKL_threads)))
 
     # Prepare CTYPES pointers for MKL sparse CSR BLAS
     int_m_data = int_m.data.ctypes.data_as(POINTER(fl_pr))
@@ -266,8 +266,8 @@ def solv_MKL_sparse(nsteps, dX, rho_inv, int_m, dec_m, phi, grid_idcs):
     cdone = fl_pr(1.)
     cione = c_int(1)
 
-    # enmuloss = config['enable_muon_energy_loss']
-    # muloss_min_step = config['muon_energy_loss_min_step']
+    # enmuloss = config.enable_muon_energy_loss
+    # muloss_min_step = config.muon_energy_loss_min_step
     # # Accumulate at least a few g/cm2 for energy loss steps
     # # to avoid numerical errors
     # dXaccum = 0.
@@ -321,7 +321,7 @@ def solv_MKL_sparse(nsteps, dX, rho_inv, int_m, dec_m, phi, grid_idcs):
         from scipy.integrate import ode
         ri = self.density_model.r_X2rho
 
-        if config['enable_muon_energy_loss']:
+        if config.enable_muon_energy_loss:
             raise NotImplementedError(
                 'Energy loss not imlemented for this solver.')
 
@@ -343,7 +343,7 @@ def solv_MKL_sparse(nsteps, dX, rho_inv, int_m, dec_m, phi, grid_idcs):
 
         # Setup solver
         r = ode(dPhi_dX).set_integrator(
-            with_jacobian=False, **config['ode_params'])
+            with_jacobian=False, **config.ode_params)
 
         if int_grid is not None:
             initial_depth = int_grid[0]
