@@ -3,3 +3,4 @@ data
 docs/_build
 .vscode
 examples/.ipynb*
+_skbuild
