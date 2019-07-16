@@ -1,10 +1,8 @@
-#! /usr/bin/env python
+
 from __future__ import print_function
-from ctypes import cdll, Structure, c_long, c_int, \
-                   c_double, pointer, byref, \
-                   POINTER
-import copy
-from .c_msis_interface import *
+from ctypes import (c_int, c_double, pointer, byref)
+from .c_msis_interface import (msis, nrlmsise_output, nrlmsise_input,
+                               nrlmsise_flags, ap_array)
 
 output = [nrlmsise_output() for i in range(17)]
 inp = [nrlmsise_input() for i in range(17)]

@@ -57,9 +57,9 @@ def print_in_rows(min_dbg_level, str_list, n_cols=5):
     if min_dbg_level > config.debug_level:
         return
 
-    l = len(str_list)
-    n_full_length = int(l / n_cols)
-    n_rest = l % n_cols
+    ls = len(str_list)
+    n_full_length = int(ls / n_cols)
+    n_rest = ls % n_cols
     print_str = '\n'
     for i in range(n_full_length):
         print_str += ('"{:}", ' * n_cols).format(*str_list[i * n_cols:(i + 1) *
@@ -88,8 +88,9 @@ def getAZN(pdg_id):
     number :math:`N` of ``pdg_id``.
 
     Note::
-    
-        PDG ID for nuclei is coded according to 10LZZZAAAI. For iron-52 it is 1000260520.
+
+        PDG ID for nuclei is coded according to 10LZZZAAAI.
+        For iron-52 it is 1000260520.
 
     Args:
         pdgid (int): PDG ID of nucleus/mass group
@@ -150,10 +151,11 @@ def corsikaid2pdg(corsika_id):
 
 def pdg2corsikaid(pdg_id):
     """Conversion from nuclear PDG ID to CORSIKA ID.
-    
+
     Note::
-    
-        PDG ID for nuclei is coded according to 10LZZZAAAI. For iron-52 it is 1000260520.
+
+        PDG ID for nuclei is coded according to 10LZZZAAAI.
+        For iron-52 it is 1000260520.
     """
     if pdg_id == 2212:
         return 14
@@ -238,5 +240,6 @@ def info(min_dbg_level, *message, **kwargs):
     if condition and min_dbg_level <= config.debug_level:
         message = [str(m) for m in message]
         cname = caller_name() if not no_caller else ''
-        if blank_caller: cname = len(cname) * ' '
+        if blank_caller:
+            cname = len(cname) * ' '
         print(cname + " ".join(message))

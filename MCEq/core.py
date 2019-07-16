@@ -23,14 +23,14 @@ The preferred way to instantiate :class:`MCEq.core.MCEqRun` is::
 
 """
 import os
-import sys
 import six
 from time import time
 import numpy as np
 import mceq_config as config
-from MCEq.misc import normalize_hadronic_model_name, info, energy_grid
+from MCEq.misc import normalize_hadronic_model_name, info
 from MCEq.particlemanager import ParticleManager
 import MCEq.data
+
 
 class MCEqRun(object):
     """Main class for handling the calculation.
@@ -64,7 +64,6 @@ class MCEqRun(object):
       obs_ids (list): list of particle name strings. Those lepton decay
         products will be scored in the special ``obs_`` categories
     """
-
     def __init__(self, interaction_model, primary_model, theta_deg, **kwargs):
 
         self.mceq_db = MCEq.data.HDF5Backend()
@@ -122,7 +121,7 @@ class MCEqRun(object):
         # Default GPU device id for CUDA
         self.cuda_device = kwargs.pop('cuda_gpu_id', config.cuda_gpu_id)
 
-        #Print particle list after tracking particles have been initialized
+        # Print particle list after tracking particles have been initialized
         self.pman.print_particle_tables(2)
 
         # Set atmosphere and geometry TODO do not allow empty density model
@@ -155,7 +154,7 @@ class MCEqRun(object):
 
     @property
     def dim_states(self):
-        """Number of cascade particles times dimension of grid 
+        """Number of cascade particles times dimension of grid
         (dimension of the equation system)"""
         return self.pman.dim_states
 
@@ -200,7 +199,8 @@ class MCEqRun(object):
         ref = self.pman.pname2pref
         sol = None
         if grid_idx is not None and len(self.grid_sol) == 0:
-            raise Exception('Solution not has not been computed on grid. Check input.')
+            raise Exception(
+                'Solution not has not been computed on grid. Check input.')
         if grid_idx is None:
             sol = np.copy(self._solution)
         elif grid_idx >= len(self.grid_sol):
@@ -284,8 +284,7 @@ class MCEqRun(object):
             ptot_bins = np.sqrt((self.e_bins + ref[lep_str].mass)**2 -
                                 ref[lep_str].mass**2)
             ptot_grid = np.sqrt(ptot_bins[1:] * ptot_bins[:-1])
-            dEkindp = ptot_grid / np.sqrt(ptot_grid**2 +
-                                          ref[lep_str].mass**2)
+            dEkindp = ptot_grid / np.sqrt(ptot_grid**2 + ref[lep_str].mass**2)
             res *= dEkindp
             if not integrate:
                 return ptot_grid, res * ptot_grid**mag
@@ -326,7 +325,7 @@ class MCEqRun(object):
 
         self.int_cs.load(interaction_model)
 
-        #TODO: simplify this, stuff not needed anymore
+        # TODO: simplify this, stuff not needed anymore
         if not update_particle_list and self._particle_list is not None:
             info(10, 'Re-using particle list.')
             self.interactions.load(interaction_model,
@@ -436,8 +435,8 @@ class MCEqRun(object):
                 'Warning protons not part of equation system, can not set primary flux.'
             )
 
-        if (2112, 0) in six.keys(self.pman) and not self.pman[(2112,
-                                                            0)].is_resonance:
+        if (2112, 0) in six.keys(
+                self.pman) and not self.pman[(2112, 0)].is_resonance:
             self._phi0[min_idx + self.pman[(2112, 0)].lidx:self.pman[(
                 2112, 0)].uidx] = 1e-4 * n_top
         elif (2212, 0) in six.keys(self.pman):
@@ -466,7 +465,6 @@ class MCEqRun(object):
 
         from scipy.linalg import solve
         from MCEq.misc import getAZN_corsika, getAZN
-        import warnings
 
         if corsika_id and pdg_id:
             raise Exception('Provide either corsika or PDG ID')
@@ -520,7 +518,7 @@ class MCEqRun(object):
             b_protons = np.array(
                 [n_protons, En * n_protons, En**2 * n_protons])
             p_lidx = self.pman[2212].lidx
-            
+
             self._phi0[p_lidx + cenbin - 1:p_lidx + cenbin + 2] = solve(
                 emat, b_protons)
         if n_neutrons > 0:
@@ -784,7 +782,7 @@ class MCEqRun(object):
         self.integration_path = len(dX_vec), dX_vec, rho_inv_vec, grid_idcs
 
     def n_mu(self, grid_idx=None, min_energy_cutoff=1e-1):
-        """Returns muon number at a grid step above 
+        """Returns muon number at a grid step above
         an energy threshold for counting."""
         ie_min = np.argmin(
             np.abs(self.e_bins -
@@ -805,7 +803,7 @@ class MCEqRun(object):
                 'total_mu-', mag=0, integrate=True, grid_idx=grid_idx))
 
     def n_e(self, grid_idx=None, min_energy_cutoff=1e-1):
-        """Returns muon number at a grid step above 
+        """Returns muon number at a grid step above
         an energy threshold for counting."""
         ie_min = np.argmin(
             np.abs(self.e_bins -
@@ -900,7 +898,6 @@ class MCEqRun(object):
 
 class MatrixBuilder(object):
     """This class constructs the interaction and decay matrices."""
-
     def __init__(self, particle_manager):
         self.pman = particle_manager
         self._energy_grid = self.pman._energy_grid
@@ -1042,7 +1039,7 @@ class MatrixBuilder(object):
 
     @property
     def dim_states(self):
-        """Number of cascade particles times dimension of grid 
+        """Number of cascade particles times dimension of grid
         (dimension of the equation system)"""
         return self.pman.dim_states
 
@@ -1053,7 +1050,7 @@ class MatrixBuilder(object):
 
     def _csr_from_blocks(self, blocks):
         """Construct a csr matrix from a dictionary of submatrices (blocks)
-        
+
         Note::
 
             It's super pain the a** to construct a properly indexed sparse matrix

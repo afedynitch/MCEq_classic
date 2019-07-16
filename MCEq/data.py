@@ -19,7 +19,7 @@ import h5py
 from collections import defaultdict
 import mceq_config as config
 from os.path import join, isfile
-from .misc import normalize_hadronic_model_name, is_charm_pdgid, info
+from .misc import normalize_hadronic_model_name, info
 
 # TODO: Convert this to some functional generic class. Very erro prone to
 # enter stuff by hand
@@ -468,7 +468,7 @@ class Interactions(object):
             regenerate_index = True
         if regenerate_index:
             self.particles = []
-            for p in self.six.keys(relations):
+            for p in six.keys(self.relations):
                 if p not in self.parents:
                     _ = self.relations.pop(p, None)
                     continue
@@ -478,7 +478,7 @@ class Interactions(object):
 
         if config.adv_set['disable_direct_leptons']:
             # info(5, 'Hotfix for DPMJET, no direct leptons')
-            for p in self.six.keys(relations):
+            for p in six.keys(self.relations):
                 self.relations[p] = [
                     c for c in self.relations[p] if not 10 < abs(c[0]) < 20
                 ]
@@ -673,7 +673,7 @@ class Interactions(object):
         m = self.index_d[(parent, child)]
 
         if config.adv_set['disable_leading_mesons'] and abs(child) < 2000 \
-                and (parent, -child) in self.six.keys(index_d):
+                and (parent, -child) in six.keys(self.index_d):
             m_anti = self.index_d[(parent, -child)]
             ie = 50
             info(5, 'sum in disable_leading_mesons',
@@ -766,7 +766,7 @@ class Decays(object):
 
         if regenerate_index:
             self.particles = []
-            for p in self.six.keys(relations):
+            for p in six.keys(self.relations):
                 if p not in self.parents:
                     _ = self.relations.pop(p, None)
                     continue
@@ -877,9 +877,9 @@ class InteractionCrossSections(object):
         message_templ = 'HadAirCrossSections(): replacing {0} with {1} cross-section'
         if isinstance(parent, tuple):
             parent = parent[0]
-        if parent in self.six.keys(index_d):
+        if parent in six.keys(self.index_d):
             cs = self.index_d[parent]
-        elif abs(parent) in self.six.keys(index_d):
+        elif abs(parent) in six.keys(self.index_d):
             cs = self.index_d[abs(parent)]
         elif 100 < abs(parent) < 300 and abs(parent) != 130:
             cs = self.index_d[211]

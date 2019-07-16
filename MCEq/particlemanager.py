@@ -31,7 +31,8 @@ backward_compatible_namestr = {
 }
 
 
-# Replace particle names for neutrinos with those used in previous MCEq versions
+# Replace particle names for neutrinos with those used
+# in previous MCEq versions
 def _pname(pdg_id_or_name):
     """Replace some particle names from pythia database with those from previous
     MCEq versions for backward compatibility."""
@@ -49,9 +50,9 @@ class MCEqParticle(object):
     Args:
       pdg_id (int): PDG ID of the particle
       egrid (np.array, optional): energy grid (centers)
-      cs_db (object, optional): reference to an instance of :class:`InteractionYields`
+      cs_db (object, optional): reference to an instance of
+                                :class:`InteractionYields`
     """
-
     def __init__(self,
                  pdg_id,
                  helicity,
@@ -102,9 +103,11 @@ class MCEqParticle(object):
         #: (int) MCEq ID
         self.mceqidx = -1
 
-        #: (float) mixing energy, transition between hadron and resonance behavior
+        #: (float) mixing energy, transition between hadron and
+        # resonance behavior
         self.E_mix = 0
-        #: (int) energy grid index, where transition between hadron and resonance occurs
+        #: (int) energy grid index, where transition between
+        # hadron and resonance occurs
         self.mix_idx = 0
         #: (float) critical energy in air at the surface
         self.E_crit = 0
@@ -199,13 +202,14 @@ class MCEqParticle(object):
 
     def set_hadronic_channels(self, hadronic_db, pmanager):
         """Changes the hadronic interaction model.
-        
+
         Replaces indexing of the yield dictionary from PDG IDs
         with references from partilcle manager.
         """
 
         self.current_hadronic_model = hadronic_db.iam
-        # Collect MCEqParticle references to children instead of PDG ID as index
+        # Collect MCEqParticle references to children
+        # instead of PDG ID as index
         if self.pdg_id in hadronic_db.parents and not self.is_tracking:
             self.is_projectile = True
             self.hadr_secondaries = [
@@ -353,7 +357,7 @@ class MCEqParticle(object):
         #: unit - :math:`\text{GeV}^2 \cdot \text{mbarn}`
         GeV2mbarn = 10.0 * GeVfm**2
         #: unit conversion - :math:`\text{mbarn} \to \text{cm}^2`
-        mbarn2cm2 =  GeV2mbarn / GeVcm**2
+        mbarn2cm2 = GeV2mbarn / GeVcm**2
         if mbarn:
             return mbarn2cm2 * self.cs
 
@@ -400,11 +404,11 @@ class MCEqParticle(object):
             child][chidx[0]:chidx[1], projidx[0]:projidx[1]]
 
     def dN_dxlab(self, energy, sec_pdg, verbose=True, **kwargs):
-        r"""Returns :math:`dN/dx_{\rm Lab}` for interaction energy close 
+        r"""Returns :math:`dN/dx_{\rm Lab}` for interaction energy close
         to ``energy`` for hadron-air collisions.
 
         The function respects modifications applied via :func:`_set_mod_pprod`.
-        
+
         Args:
             energy (float): approximate interaction energy
             prim_pdg (int): PDG ID of projectile
@@ -426,11 +430,11 @@ class MCEqParticle(object):
         return xl_grid, xl_dist
 
     def dNdec_dxlab(self, energy, sec_pdg, verbose=True, **kwargs):
-        r"""Returns :math:`dN/dx_{\rm Lab}` for interaction energy close 
+        r"""Returns :math:`dN/dx_{\rm Lab}` for interaction energy close
         to ``energy`` for hadron-air collisions.
 
         The function respects modifications applied via :func:`_set_mod_pprod`.
-        
+
         Args:
             energy (float): approximate interaction energy
             prim_pdg (int): PDG ID of projectile
@@ -458,11 +462,11 @@ class MCEqParticle(object):
                pos_only=True,
                verbose=True,
                **kwargs):
-        r"""Returns :math:`dN/dx_{\rm F}` in c.m. for interaction energy close 
+        r"""Returns :math:`dN/dx_{\rm F}` in c.m. for interaction energy close
         to ``energy`` for hadron-air collisions.
 
         The function respects modifications applied via :func:`_set_mod_pprod`.
-        
+
         Args:
             energy (float): approximate interaction energy
             prim_pdg (int): PDG ID of projectile
@@ -554,9 +558,9 @@ class MCEqParticle(object):
 
         inv_intlen = self.inverse_interaction_length()
         inv_declen = self.inverse_decay_length()
-        if (not np.any(np.nan_to_num(inv_declen) > 0.) or abs(
-                self.pdg_id[0]) in config.adv_set["exclude_from_mixing"] or
-                config.adv_set['no_mixing']):
+        if (not np.any(np.nan_to_num(inv_declen) > 0.)
+                or abs(self.pdg_id[0]) in config.adv_set["exclude_from_mixing"]
+                or config.adv_set['no_mixing']):
             self.mix_idx = 0
             self.is_mixed = False
             self.is_resonance = False
@@ -627,12 +631,11 @@ class MCEqParticle(object):
 
 class ParticleManager(object):
     """Database for objects of :class:`MCEqParticle`.
-    
+
     Authors:
         Anatoli Fedynitch (DESY)
         Jonas Heinze (DESY)
     """
-
     def __init__(self, pdg_id_list, energy_grid, cs_db, mod_table=None):
         # (dict) Dimension of primary grid
         self._energy_grid = energy_grid
@@ -645,10 +648,10 @@ class ParticleManager(object):
         # :class:`particlemanager.MCEqParticle`
         self.pdg2pref = {}
         #: (dict) Converts particle name to reference of
-        #:class:`particlemanager.MCEqParticle`
+        #: class:`particlemanager.MCEqParticle`
         self.pname2pref = {}
         #: (dict) Converts prince index to reference of
-        #:class:`particlemanager.MCEqParticle`
+        #: class:`particlemanager.MCEqParticle`
         self.mceqidx2pref = {}
         #: (dict) Converts index in state vector to Neucosma ID
         self.mceqidx2pdg = {}
@@ -677,7 +680,7 @@ class ParticleManager(object):
 
     def set_cross_sections_db(self, cs_db):
         """Sets the inelastic cross section to each interacting particle.
-        
+
         This applies to most of the hadrons and does not imply that the
         particle becomes a projectile. parents need in addition defined
         hadronic channels.
@@ -746,9 +749,9 @@ class ParticleManager(object):
         only leptons from decays certain particles. This present feature
         removes the special PDG IDs 71XX, 72XX, etc and allows to define
         any channel like::
-        
+
             $ particleManagerInstance.add_tracking_particle([211], 14, 'pi_numu')
-        
+
         This will store muon neutrinos from pion decays under the alias 'pi_numu'.
         Multiple parents are allowed::
 
@@ -807,7 +810,7 @@ class ParticleManager(object):
 
         # Track if attempt to add the tracking particle succeeded at least once
         track_success = False
-        #Include antiparticle
+        # Include antiparticle
 
         for parent_pdg in list(
                 set(parent_list + [(-p, h) for (p, h) in parent_list])):
@@ -837,7 +840,8 @@ class ParticleManager(object):
                 self.tracking_relations.append(
                     (parent_pdg, child_pdg, alias_name, from_interactions))
                 track_success = True
-        if track_success and tracking_particle.name not in six.keys(self.pname2pref):
+        if track_success and tracking_particle.name not in six.keys(
+                self.pname2pref):
             tracking_particle.mceqidx = np.max(six.keys(self.mceqidx2pref)) + 1
             self.all_particles.append(tracking_particle)
             self.cascade_particles.append(tracking_particle)
@@ -909,7 +913,8 @@ class ParticleManager(object):
             p for p in particle_list if not p.is_resonance
         ]
 
-        self.cascade_particles = sorted(self.cascade_particles, key=lambda p: abs(p.pdg_id[0]))
+        self.cascade_particles = sorted(self.cascade_particles,
+                                        key=lambda p: abs(p.pdg_id[0]))
 
         # These particles will only exist implicitely and integated out
         self.resonances = [p for p in particle_list if p.is_resonance]
@@ -989,8 +994,7 @@ class ParticleManager(object):
 
         # Track prompt leptons
         self.track_leptons_from([
-            p.pdg_id
-            for p in self.all_particles if p.ctau < config.prompt_ctau
+            p.pdg_id for p in self.all_particles if p.ctau < config.prompt_ctau
         ],
                                 'prcas_',
                                 exclude_em=True,

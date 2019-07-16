@@ -15,7 +15,7 @@ sys.path.append('..')
 
 
 class EarthGeometry(object):
-    """A model of the Earth's geometry, approximating it
+    r"""A model of the Earth's geometry, approximating it
        by a sphere. The figure below illustrates the meaning of the parameters.
 
     .. figure:: graphics/geometry.*
@@ -45,8 +45,8 @@ class EarthGeometry(object):
         fig.set_tight_layout(dict(rect=[0.00, 0.00, 1, 1]))
         plt.plot(theta_list, g.l(th_list_rad) / 1e5,
                  lw=2)
-        plt.xlabel(r'zenith $\\theta$ at detector')
-        plt.ylabel(r'path length $l(\\theta)$ in km')
+        plt.xlabel(r'zenith $\theta$ at detector')
+        plt.ylabel(r'path length $l(\theta)$ in km')
         ax = plt.gca()
         ax.spines['right'].set_visible(False)
         ax.spines['top'].set_visible(False)
@@ -55,10 +55,11 @@ class EarthGeometry(object):
 
         fig = plt.figure(figsize=(5, 4))
         fig.set_tight_layout(dict(rect=[0.00, 0.00, 1, 1]))
-        plt.plot(theta_list, np.arccos(g.cos_th_star(th_list_rad)) / np.pi * 180.,
-                 lw=2)
-        plt.xlabel(r'zenith $\\theta$ at detector')
-        plt.ylabel(r'$\\theta^*$ at top of the atm.')
+        plt.plot(theta_list,
+            np.arccos(g.cos_th_star(th_list_rad)) / np.pi * 180.,
+            lw=2)
+        plt.xlabel(r'zenith $\theta$ at detector')
+        plt.ylabel(r'$\theta^*$ at top of the atm.')
         plt.ylim([0, 90])
         ax = plt.gca()
         ax.spines['right'].set_visible(False)
@@ -86,8 +87,8 @@ class EarthGeometry(object):
             plt.plot(delta_l_vec / 1e5, g.h(delta_l_vec, theta_path) / 1e5,
                      label=r'${0}^o$'.format(theta), lw=2)
         plt.legend()
-        plt.xlabel(r'path length $\\Delta l$ [km]')
-        plt.ylabel(r'atm. height $h_{atm}(\\Delta l, \\theta)$ [km]')
+        plt.xlabel(r'path length $\Delta l$ [km]')
+        plt.ylabel(r'atm. height $h_{atm}(\Delta l, \theta)$ [km]')
         ax = plt.gca()
         ax.spines['right'].set_visible(False)
         ax.spines['top'].set_visible(False)
@@ -108,7 +109,6 @@ class EarthGeometry(object):
       r_obs (float): radius at observation level [cm]
 
     """
-
     def __init__(self):
 
         self.h_obs = config.h_obs * 1e2  # cm
@@ -118,55 +118,57 @@ class EarthGeometry(object):
         self.r_obs = self.r_E + self.h_obs
 
     def _A_1(self, theta):
-        """Segment length :math:`A1(\\theta)` in cm.
+        r"""Segment length :math:`A1(\theta)` in cm.
         """
         return self.r_obs * np.cos(theta)
 
     def _A_2(self, theta):
-        """Segment length :math:`A2(\\theta)` in cm.
+        r"""Segment length :math:`A2(\theta)` in cm.
         """
         return self.r_obs * np.sin(theta)
 
     def l(self, theta):
-        """Returns path length in [cm] for given zenith
-        angle :math:`\\theta` [rad].
+        r"""Returns path length in [cm] for given zenith
+        angle :math:`\theta` [rad].
         """
-        return (np.sqrt(self.r_top ** 2 - self._A_2(theta) ** 2)
-                - self._A_1(theta))
+        return (np.sqrt(self.r_top**2 - self._A_2(theta)**2) -
+                self._A_1(theta))
 
     def cos_th_star(self, theta):
-        """Returns the zenith angle at atmospheric boarder
-        :math:`\\cos(\\theta^*)` in [rad] as a function of zenith at detector.
+        r"""Returns the zenith angle at atmospheric boarder
+        :math:`\cos(\theta^*)` in [rad] as a function of zenith at detector.
         """
         return (self._A_1(theta) + self.l(theta)) / self.r_top
 
     def h(self, dl, theta):
-        """Height above surface at distance :math:`dl` counted from the beginning
-        of path :math:`l(\\theta)` in cm.
+        r"""Height above surface at distance :math:`dl` counted from the beginning
+        of path :math:`l(\theta)` in cm.
         """
-        return np.sqrt(self._A_2(theta) ** 2
-                       + (self._A_1(theta) + self.l(theta) - dl) ** 2) - self.r_E
+        return np.sqrt(
+            self._A_2(theta)**2 +
+            (self._A_1(theta) + self.l(theta) - dl)**2) - self.r_E
 
     def delta_l(self, h, theta):
-        """Distance :math:`dl` covered along path :math:`l(\\theta)`
+        r"""Distance :math:`dl` covered along path :math:`l(\theta)`
         as a function of current height. Inverse to :func:`h`.
         """
-        return (self._A_1(theta) + self.l(theta)
-                - np.sqrt((h + self.r_E) ** 2 - self._A_2(theta) ** 2))
+        return (self._A_1(theta) + self.l(theta) -
+                np.sqrt((h + self.r_E)**2 - self._A_2(theta)**2))
 
 
 def chirkin_cos_theta_star(costheta):
-    """:math:`\\cos(\\theta^*)` parameterization.
+    r""":math:`\cos(\theta^*)` parameterization.
 
     This function returns the equivalent zenith angle for
     for very inclined showers. It is based on a CORSIKA study by
-    `D. Chirkin, hep-ph/0407078v1, 2004 <http://arxiv.org/abs/hep-ph/0407078v1>`_.
+    `D. Chirkin, hep-ph/0407078v1, 2004
+    <http://arxiv.org/abs/hep-ph/0407078v1>`_.
 
     Args:
-        costheta (float): :math:`\\cos(\\theta)` in [rad]
+        costheta (float): :math:`\cos(\theta)` in [rad]
 
     Returns:
-        float: :math:`\\cos(\\theta*)` in [rad]
+        float: :math:`\cos(\theta*)` in [rad]
     """
 
     p1 = 0.102573
@@ -175,7 +177,8 @@ def chirkin_cos_theta_star(costheta):
     p4 = 0.0407253
     p5 = 0.817285
     x = costheta
-    return np.sqrt((x ** 2 + p1 ** 2 + p2 * x ** p3 + p4 * x ** p5) / (1 + p1 ** 2 + p2 + p4))
+    return np.sqrt(
+        (x**2 + p1**2 + p2 * x**p3 + p4 * x**p5) / (1 + p1**2 + p2 + p4))
 
 
 if __name__ == "__main__":
@@ -188,8 +191,7 @@ if __name__ == "__main__":
     th_list_rad = theta_rad(theta_list)
     fig = plt.figure(figsize=(5, 4))
     fig.set_tight_layout(dict(rect=[0.00, 0.00, 1, 1]))
-    plt.plot(theta_list, earth.l(th_list_rad) / 1e5,
-             lw=2)
+    plt.plot(theta_list, earth.l(th_list_rad) / 1e5, lw=2)
     plt.xlabel(r'zenith $\theta$ at detector')
     plt.ylabel(r'path length $l(\theta)$ in km')
     ax = plt.gca()
@@ -201,7 +203,8 @@ if __name__ == "__main__":
     fig = plt.figure(figsize=(5, 4))
     fig.set_tight_layout(dict(rect=[0.00, 0.00, 1, 1]))
     plt.plot(theta_list,
-             np.arccos(earth.cos_th_star(th_list_rad)) / np.pi * 180., lw=2)
+             np.arccos(earth.cos_th_star(th_list_rad)) / np.pi * 180.,
+             lw=2)
     plt.xlabel(r'zenith $\theta$ at detector')
     plt.ylabel(r'$\theta^*$ at top of the atm.')
     plt.ylim([0, 90])
@@ -213,8 +216,7 @@ if __name__ == "__main__":
 
     fig = plt.figure(figsize=(5, 4))
     fig.set_tight_layout(dict(rect=[0.00, 0.00, 1, 1]))
-    plt.plot(h_vec / 1e5,
-             earth.delta_l(h_vec, theta_rad(85.)) / 1e5, lw=2)
+    plt.plot(h_vec / 1e5, earth.delta_l(h_vec, theta_rad(85.)) / 1e5, lw=2)
     plt.ylabel(r'Path length $\Delta l(h)$ in km')
     plt.xlabel(r'atm. height $h_{atm}$ in km')
     ax = plt.gca()
@@ -228,8 +230,10 @@ if __name__ == "__main__":
     for theta in [30., 60., 70., 80., 85., 90.]:
         theta_path = theta_rad(theta)
         delta_l_vec = np.linspace(0, earth.l(theta_path), 1000)
-        plt.plot(delta_l_vec / 1e5, earth.h(delta_l_vec, theta_path) / 1e5,
-                 label=r'${0}^o$'.format(theta), lw=2)
+        plt.plot(delta_l_vec / 1e5,
+                 earth.h(delta_l_vec, theta_path) / 1e5,
+                 label=r'${0}^o$'.format(theta),
+                 lw=2)
     plt.legend()
     plt.xlabel(r'path length $\Delta l$ [km]')
     plt.ylabel(r'atm. height $h_{atm}(\Delta l, \theta)$ [km]')

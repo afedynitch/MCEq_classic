@@ -35,7 +35,7 @@ from abc import ABCMeta, abstractmethod
 from six import with_metaclass
 from os.path import join
 import numpy as np
-from MCEq.misc import theta_deg, theta_rad, info
+from MCEq.misc import theta_rad, info
 from numba import jit, double
 
 import mceq_config as config
@@ -92,7 +92,7 @@ class EarthsAtmosphere(with_metaclass(ABCMeta)):
         Raises:
             Exception: if :func:`set_theta` was not called before.
         """
-        from scipy.integrate import quad, cumtrapz
+        from scipy.integrate import cumtrapz
         from time import time
         from scipy.interpolate import UnivariateSpline
 
@@ -105,8 +105,8 @@ class EarthsAtmosphere(with_metaclass(ABCMeta)):
 
         thrad = self.thrad
         path_length = self.geom.l(thrad)
-        vec_rho_l = np.vectorize(lambda delta_l: self.get_density(
-            self.geom.h(delta_l, thrad)))
+        vec_rho_l = np.vectorize(
+            lambda delta_l: self.get_density(self.geom.h(delta_l, thrad)))
         dl_vec = np.linspace(0, path_length, n_steps)
 
         now = time()
@@ -243,9 +243,6 @@ class EarthsAtmosphere(with_metaclass(ABCMeta)):
         return np.arccos(1. / (1. + self.nref_rel_air(h_cm))) * 180. / np.pi
 
 
-#=========================================================================
-# CorsikaAtmosphere
-#=========================================================================
 class CorsikaAtmosphere(EarthsAtmosphere):
     """Class, holding the parameters of a Linsley type parameterization
     similar to the Air-Shower Monte Carlo
@@ -416,7 +413,7 @@ class CorsikaAtmosphere(EarthsAtmosphere):
     def get_mass_overburden(self, h_cm):
         """ Returns the mass overburden in atmosphere in g/cm**2.
 
-        Uses the optimized module function :func:`corsika_get_m_overburden_jit`.
+        Uses the optimized module function :func:`corsika_get_m_overburden_jit`
 
         Args:
           h_cm (float): height in cm
@@ -493,8 +490,7 @@ def planar_rho_inv_jit(X, cos_theta, param):
     if layer == 4:
         res = c[4] / b[4]
     else:
-        l = layer
-        res = c[l] / (x_v - a[l])
+        res = c[layer] / (x_v - a[layer])
     return res
 
 
@@ -522,8 +518,7 @@ def corsika_get_density_jit(h_cm, param):
     if layer == 4:
         res = b[4] / c[4]
     else:
-        l = layer
-        res = b[l] / c[l] * np.exp(-h_cm / c[l])
+        res = b[layer] / c[layer] * np.exp(-h_cm / c[layer])
 
     return res
 
@@ -555,8 +550,7 @@ def corsika_get_m_overburden_jit(h_cm, param):
     if layer == 4:
         res = a[4] - b[4] / c[4] * h_cm
     else:
-        l = layer
-        res = a[l] + b[l] * np.exp(-h_cm / c[l])
+        res = a[layer] + b[layer] * np.exp(-h_cm / c[layer])
 
     return res
 
@@ -569,8 +563,9 @@ class IsothermalAtmosphere(EarthsAtmosphere):
     one adjust the parameters to match a more realistic density profile
     at altitudes between 10 - 30 km, where the high energy muon production
     rate peaks. Such parametrizations are given in the book "Cosmic Rays and
-    Particle Physics", Gaisser, Engel and Resconi (2016). The default values are
-    from M. Thunman, G. Ingelman, and P. Gondolo, Astropart. Physics 5, 309 (1996).
+    Particle Physics", Gaisser, Engel and Resconi (2016). The default values
+    are from M. Thunman, G. Ingelman, and P. Gondolo, Astropart. Physics 5,
+    309 (1996).
 
     Args:
       location (str): no effect
@@ -578,7 +573,6 @@ class IsothermalAtmosphere(EarthsAtmosphere):
       hiso_km (float): isothermal scale height in km
       X0 (float): Ground level overburden
     """
-
     def __init__(self, location, season, hiso_km=6.3, X0=1300.):
         self.hiso_cm = hiso_km * 1e5
         self.X0 = X0
@@ -626,13 +620,12 @@ class MSIS00Atmosphere(EarthsAtmosphere):
       location (str): see :func:`init_parameters`
       season (str,optional): see :func:`init_parameters`
     """
-
     def __init__(self,
                  location,
                  season=None,
                  doy=None,
                  use_loc_altitudes=False):
-        from MCEq.geometry.msis_wrapper import cNRLMSISE00
+        from MCEq.nrlmsis00.msis_wrapper import cNRLMSISE00
 
         self._msis = cNRLMSISE00()
 
@@ -698,7 +691,7 @@ class MSIS00Atmosphere(EarthsAtmosphere):
         """ Changes MSIS season by day of year.
 
         Args:
-          day_of_year (int): 1. Jan.=0, 1.Feb=32 
+          day_of_year (int): 1. Jan.=0, 1.Feb=32
 
         """
         self._msis.set_doy(day_of_year)
@@ -726,7 +719,6 @@ class AIRSAtmosphere(EarthsAtmosphere):
       location (str): see :func:`init_parameters`
       season (str,optional): see :func:`init_parameters`
     """
-
     def __init__(self, location, season, extrapolate=True, *args, **kwargs):
         if location != 'SouthPole':
             raise Exception(self.__class__.__name__ +
@@ -788,11 +780,11 @@ class AIRSAtmosphere(EarthsAtmosphere):
             tab = np.loadtxt(fname,
                              converters={0: strpdate2num('%Y/%m/%d')},
                              usecols=[0] + list(range(2, 27)))
-            with open(fname, 'r') as f:
-                comline = f.readline()
-            p_levels = [
-                float(s.strip()) for s in comline.split(' ')[3:] if s != ''
-            ][min_press_idx:]
+            # with open(fname, 'r') as f:
+            #     comline = f.readline()
+            # p_levels = [
+            #     float(s.strip()) for s in comline.split(' ')[3:] if s != ''
+            # ][min_press_idx:]
             dates = num2date(tab[:, 0])
             for di, date in enumerate(dates):
                 if date.month == 6 and date.day == 1:
@@ -816,7 +808,7 @@ class AIRSAtmosphere(EarthsAtmosphere):
             t_vec = np.array(data_collection['temp'][2][didx, :])
 
             if self.extrapolate:
-                #Extrapolate using msis
+                # Extrapolate using msis
                 h_extra = np.linspace(h_vec[-1], config.h_atm * 1e2, 250)
                 msis._msis.set_doy(self._get_y_doy(date)[1] - 1)
                 msis_extra_d = np.array([msis.get_density(h) for h in h_extra])
@@ -908,7 +900,8 @@ class AIRSAtmosphere(EarthsAtmosphere):
         try:
             ret[h_cm > self.h[-1]] = np.nan
         except TypeError:
-            if h_cm > self.h[-1]: return np.nan
+            if h_cm > self.h[-1]:
+                return np.nan
         return ret
 
     def get_temperature(self, h_cm):
@@ -927,7 +920,8 @@ class AIRSAtmosphere(EarthsAtmosphere):
         try:
             ret[h_cm > self.h[-1]] = np.nan
         except TypeError:
-            if h_cm > self.h[-1]: return np.nan
+            if h_cm > self.h[-1]:
+                return np.nan
         return ret
 
 
@@ -939,7 +933,6 @@ class MSIS00IceCubeCentered(MSIS00Atmosphere):
       location (str): see :func:`init_parameters`
       season (str,optional): see :func:`init_parameters`
     """
-
     def __init__(self, location, season):
         if location != 'SouthPole':
             info(2, 'location forced to the South Pole')
@@ -1013,7 +1006,6 @@ class GeneralizedTarget(object):
       env_density (float): density of the default material in g/cm**3
       env_name (str): title for this environment
     """
-
     def __init__(
             self,
             len_target=config.len_target * 1e2,  # cm
@@ -1179,13 +1171,13 @@ class GeneralizedTarget(object):
         Raises:
             Exception: If requested position exceeds target length.
         """
-        l = np.atleast_1d(l_cm)
-        res = np.zeros_like(l)
+        l_cm = np.atleast_1d(l_cm)
+        res = np.zeros_like(l_cm)
 
-        if np.min(l) < 0 or np.max(l) > self.len_target:
+        if np.min(l_cm) < 0 or np.max(l_cm) > self.len_target:
             raise Exception("GeneralizedTarget::get_density(): " +
                             "requested position exceeds target legth.")
-        for i, li in enumerate(l):
+        for i, li in enumerate(l_cm):
             bi = 0
             while not (li >= self.start_bounds[bi]
                        and li <= self.end_bounds[bi]):
@@ -1238,7 +1230,7 @@ class GeneralizedTarget(object):
         templ = '{0:^3} | {1:15} | {2:^9.3g}  | {3:^9.3g} | {4:^8.5g}'
         info(
             min_dbg_lev,
-            '********************* List of materials *************************',
+            '********************* List of materials ***********************',
             no_caller=True)
         head = '{0:3} | {1:15} | {2:9} | {3:9} | {4:9}'.format(
             'no', 'name', 'start [cm]', 'end [cm]', 'density [g/cm**3]')
