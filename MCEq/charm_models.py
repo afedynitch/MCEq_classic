@@ -19,16 +19,15 @@ import numpy as np
 from MCEq.core import config
 from MCEq.misc import info
 from abc import ABCMeta, abstractmethod
+from six import with_metaclass
 
-
-class CharmModel():
+class CharmModel(with_metaclass(ABCMeta)):
     """Abstract class, from which implemeted charm models can inherit.
 
     Note:
       Do not instantiate this class directly.
 
     """
-    __metaclass__ = ABCMeta
 
     @abstractmethod
     def get_yield_matrix(self, proj, sec):
@@ -317,7 +316,7 @@ class WHR_charm(MRS_charm):
     """
 
     def __init__(self, e_grid, csm):
-        import cPickle as pickle
+        import pickle
 
         self.sig_table = pickle.load(open('references/logan_charm.ppl', 'rb'))
         self.e_idcs = {}

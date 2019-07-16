@@ -13,13 +13,13 @@ validating data structures:
 - :class:`HadAirCrossSections` keeps information about the inelastic,
   cross-section of hadrons with air. Typically obtained from Monte Carlo.
 """
-
+import six
 import numpy as np
 import h5py
 from collections import defaultdict
 import mceq_config as config
 from os.path import join, isfile
-from misc import normalize_hadronic_model_name, is_charm_pdgid, info
+from .misc import normalize_hadronic_model_name, is_charm_pdgid, info
 
 # TODO: Convert this to some functional generic class. Very erro prone to
 # enter stuff by hand
@@ -234,7 +234,7 @@ class HDF5Backend(object):
             read_idx += len_data[tupidx]
 
         return {
-            'parents': sorted(relations.keys()),
+            'parents': sorted(six.keys(relations)),
             'particles': sorted(list(set(particle_list))),
             'relations': dict(relations),
             'index_d': dict(index_d),
@@ -242,7 +242,7 @@ class HDF5Backend(object):
         }
 
     def _check_subgroup_exists(self, subgroup, mname):
-        available_models = subgroup.keys()
+        available_models = six.keys(subgroup)
         if mname not in available_models:
             info(0, 'Invalid choice/model', mname)
             info(0, 'Choose from:\n', '\n'.join(available_models))
@@ -327,7 +327,7 @@ class HDF5Backend(object):
                     dec_index['particles'].append(parent)
                     dec_index['particles'].append(child)
 
-                dec_index['parents'] = sorted(dec_index['relations'].keys())
+                dec_index['parents'] = sorted(six.keys(dec_index['relations']))
                 dec_index['particles'] = sorted(
                     list(set(dec_index['particles'])))
 
@@ -370,7 +370,7 @@ class HDF5Backend(object):
             cl_db = mceq_db['continuous_losses'][medium]
 
             index_d = {}
-            for pstr in cl_db.keys():
+            for pstr in six.keys(cl_db):
                 for hel in [0, 1, -1]:
                     index_d[(int(pstr), hel)] = cl_db[pstr][self._cuts]
             if config.enable_em:
@@ -385,7 +385,7 @@ class HDF5Backend(object):
                                  hel)] = em_db["electromagnetic"]['dEdX -11'][
                                      self._cuts]
 
-        return {'parents': sorted(index_d.keys()), 'index_d': index_d}
+        return {'parents': sorted(six.keys(index_d)), 'index_d': index_d}
 
 
 class Interactions(object):
@@ -468,7 +468,7 @@ class Interactions(object):
             regenerate_index = True
         if regenerate_index:
             self.particles = []
-            for p in self.relations.keys():
+            for p in self.six.keys(relations):
                 if p not in self.parents:
                     _ = self.relations.pop(p, None)
                     continue
@@ -478,7 +478,7 @@ class Interactions(object):
 
         if config.adv_set['disable_direct_leptons']:
             # info(5, 'Hotfix for DPMJET, no direct leptons')
-            for p in self.relations.keys():
+            for p in self.six.keys(relations):
                 self.relations[p] = [
                     c for c in self.relations[p] if not 10 < abs(c[0]) < 20
                 ]
@@ -546,7 +546,7 @@ class Interactions(object):
             return False
 
         # Check function with same mode but different parameter is supplied
-        for (xf_name, fargs) in mpli[pstup].keys():
+        for (xf_name, fargs) in six.keys(mpli[pstup]):
             if (xf_name == x_func.__name__) and (fargs[0] == args[0]):
                 info(1, 'Warning. If you modify only the value of a function,',
                      'unset and re-apply all changes')
@@ -673,7 +673,7 @@ class Interactions(object):
         m = self.index_d[(parent, child)]
 
         if config.adv_set['disable_leading_mesons'] and abs(child) < 2000 \
-                and (parent, -child) in self.index_d.keys():
+                and (parent, -child) in self.six.keys(index_d):
             m_anti = self.index_d[(parent, -child)]
             ie = 50
             info(5, 'sum in disable_leading_mesons',
@@ -688,13 +688,13 @@ class Interactions(object):
         else:
             info(20, 'no meson inversion in leading particle veto.', parent,
                  child)
-        if (parent[0], child[0]) in self.mod_pprod.keys():
+        if (parent[0], child[0]) in six.keys(self.mod_pprod):
             info(
                 5, 'using modified particle production for {0}/{1}'.format(
                     parent[0], child[0]))
             i = 0
             m = np.copy(m)
-            for args, mmat in self.mod_pprod[(parent[0], child[0])].items():
+            for args, mmat in six.items(self.mod_pprod[(parent[0], child[0])]):
                 info(10, i, (parent[0], child[0]), args, np.sum(mmat),
                      np.sum(m))
                 i += 1
@@ -766,7 +766,7 @@ class Decays(object):
 
         if regenerate_index:
             self.particles = []
-            for p in self.relations.keys():
+            for p in self.six.keys(relations):
                 if p not in self.parents:
                     _ = self.relations.pop(p, None)
                     continue
@@ -877,9 +877,9 @@ class InteractionCrossSections(object):
         message_templ = 'HadAirCrossSections(): replacing {0} with {1} cross-section'
         if isinstance(parent, tuple):
             parent = parent[0]
-        if parent in self.index_d.keys():
+        if parent in self.six.keys(index_d):
             cs = self.index_d[parent]
-        elif abs(parent) in self.index_d.keys():
+        elif abs(parent) in self.six.keys(index_d):
             cs = self.index_d[abs(parent)]
         elif 100 < abs(parent) < 300 and abs(parent) != 130:
             cs = self.index_d[211]

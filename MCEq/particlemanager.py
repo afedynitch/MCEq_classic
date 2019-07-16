@@ -244,7 +244,7 @@ class MCEqParticle(object):
         children_d = {}
         for c in self.children:
             children_d[c.pdg_id] = c
-        if tracking_particle.pdg_id not in children_d.keys():
+        if tracking_particle.pdg_id not in six.keys(children_d):
             info(
                 17, 'Parent particle {0} does not decay into {1}'.format(
                     self.name, tracking_particle.name))
@@ -259,7 +259,7 @@ class MCEqParticle(object):
         secondaries_d = {}
         for s in self.hadr_secondaries:
             secondaries_d[s.pdg_id] = s
-        if tracking_particle.pdg_id not in secondaries_d.keys():
+        if tracking_particle.pdg_id not in six.keys(secondaries_d):
             info(
                 17, 'Parent particle {0} does not produce {1} at the vertex'.
                 format(self.name, tracking_particle.name))
@@ -795,7 +795,7 @@ class ParticleManager(object):
                                 tracking_particle.helicity)
 
             for i in range(100):
-                if unique_child_pdg not in self.pdg2pref.keys():
+                if unique_child_pdg not in six.keys(self.pdg2pref):
                     break
                 info(
                     20, '{0}: trying to find unique_pdg ({1}) for {2}'.format(
@@ -837,9 +837,8 @@ class ParticleManager(object):
                 self.tracking_relations.append(
                     (parent_pdg, child_pdg, alias_name, from_interactions))
                 track_success = True
-        if track_success and tracking_particle.name not in self.pname2pref.keys(
-        ):
-            tracking_particle.mceqidx = np.max(self.mceqidx2pref.keys()) + 1
+        if track_success and tracking_particle.name not in six.keys(self.pname2pref):
+            tracking_particle.mceqidx = np.max(six.keys(self.mceqidx2pref)) + 1
             self.all_particles.append(tracking_particle)
             self.cascade_particles.append(tracking_particle)
             self._update_particle_tables()
@@ -1073,6 +1072,6 @@ class ParticleManager(object):
             info(10, "Particle matrix indices:", no_caller=True)
             some_index = 0
             for p in self.cascade_particles:
-                for i in xrange(self._energy_grid.d):
+                for i in range(self._energy_grid.d):
                     info(10, p.name + '_' + str(i), some_index, no_caller=True)
                     some_index += 1

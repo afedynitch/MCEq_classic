@@ -32,6 +32,7 @@ Example:
       $ python MCEq/atmospheres.py
 """
 from abc import ABCMeta, abstractmethod
+from six import with_metaclass
 from os.path import join
 import numpy as np
 from MCEq.misc import theta_deg, theta_rad, info
@@ -40,7 +41,7 @@ from numba import jit, double
 import mceq_config as config
 
 
-class EarthsAtmosphere():
+class EarthsAtmosphere(with_metaclass(ABCMeta)):
     """Abstract class containing common methods on atmosphere.
     You have to inherit from this class and implement the virtual method
     :func:`get_density`.
@@ -55,9 +56,6 @@ class EarthsAtmosphere():
                      defined in the :mod:`MCEq.geometry`
 
     """
-
-    __metaclass__ = ABCMeta
-
     def __init__(self, *args, **kwargs):
         from MCEq.geometry.geometry import EarthGeometry
         self.geom = EarthGeometry()
@@ -489,7 +487,7 @@ def planar_rho_inv_jit(X, cos_theta, param):
     res = 0.0
     x_v = X * cos_theta
     layer = 0
-    for i in xrange(t.size):
+    for i in range(t.size):
         if not x_v >= t[i]:
             layer = i
     if layer == 4:
@@ -518,7 +516,7 @@ def corsika_get_density_jit(h_cm, param):
     hl = param[4]
     res = 0.0
     layer = 0
-    for i in xrange(hl.size):
+    for i in range(hl.size):
         if not h_cm <= hl[i]:
             layer = i
     if layer == 4:
@@ -550,7 +548,7 @@ def corsika_get_m_overburden_jit(h_cm, param):
     res = 0.0
     layer = 0
 
-    for i in xrange(hl.size):
+    for i in range(hl.size):
         if not h_cm <= hl[i]:
             layer = i
 
@@ -789,7 +787,7 @@ class AIRSAtmosphere(EarthsAtmosphere):
             fname = data_path + 'tables/' + fname
             tab = np.loadtxt(fname,
                              converters={0: strpdate2num('%Y/%m/%d')},
-                             usecols=[0] + range(2, 27))
+                             usecols=[0] + list(range(2, 27)))
             with open(fname, 'r') as f:
                 comline = f.readline()
             p_levels = [

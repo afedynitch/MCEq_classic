@@ -24,6 +24,7 @@ The preferred way to instantiate :class:`MCEq.core.MCEqRun` is::
 """
 import os
 import sys
+import six
 from time import time
 import numpy as np
 import mceq_config as config
@@ -426,7 +427,7 @@ class MCEqRun(object):
         min_idx = np.argmin(np.abs(e_tot - minimal_energy))
         self._phi0 *= 0
         p_top, n_top = self.get_nucleon_spectrum(e_tot[min_idx:])[1:]
-        if (2212, 0) in self.pman.keys():
+        if (2212, 0) in six.keys(self.pman):
             self._phi0[min_idx + self.pman[(2212, 0)].lidx:self.pman[(
                 2212, 0)].uidx] = 1e-4 * p_top
         else:
@@ -435,11 +436,11 @@ class MCEqRun(object):
                 'Warning protons not part of equation system, can not set primary flux.'
             )
 
-        if (2112, 0) in self.pman.keys() and not self.pman[(2112,
+        if (2112, 0) in six.keys(self.pman) and not self.pman[(2112,
                                                             0)].is_resonance:
             self._phi0[min_idx + self.pman[(2112, 0)].lidx:self.pman[(
                 2112, 0)].uidx] = 1e-4 * n_top
-        elif (2212, 0) in self.pman.keys():
+        elif (2212, 0) in six.keys(self.pman):
             info(2, 'Neutrons not part of equation system,',
                  'substituting initial flux with protons.')
             self._phi0[min_idx + self.pman[(2212, 0)].lidx:self.pman[(
@@ -1061,7 +1062,7 @@ class MatrixBuilder(object):
         from scipy.sparse import csr_matrix
 
         new_mat = np.zeros((self.dim_states, self.dim_states))
-        for (c, p), d in blocks.iteritems():
+        for (c, p), d in six.iteritems(blocks):
             rc, rp = self.pman.mceqidx2pref[c], self.pman.mceqidx2pref[p]
             try:
                 new_mat[rc.lidx:rc.uidx, rp.lidx:rp.uidx] = d

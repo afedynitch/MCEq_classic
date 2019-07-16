@@ -75,7 +75,7 @@ def solv_numpy(nsteps, dX, rho_inv, int_m, dec_m, phi, grid_idcs):
     from time import time
     start = time()
 
-    for step in xrange(nsteps):
+    for step in range(nsteps):
         phc += (imc.dot(phc) + dmc.dot(ric[step] * phc)) * dxc[step]
 
         dXaccum += dxc[step]
@@ -182,7 +182,7 @@ def solv_CUDA_sparse(nsteps, dX, rho_inv, context, phi, grid_idcs):
     if len(grid_idcs) > 0:
         c.alloc_grid_sol(phi.shape[0],len(grid_idcs))
 
-    for step in xrange(nsteps):
+    for step in range(nsteps):
         c.solve_step(rho_inv[step], dX[step])
 
         if (grid_idcs and grid_step < len(grid_idcs)
@@ -278,7 +278,7 @@ def solv_MKL_sparse(nsteps, dX, rho_inv, int_m, dec_m, phi, grid_idcs):
     from time import time
     start = time()
 
-    for step in xrange(nsteps):
+    for step in range(nsteps):
         # delta_phi = int_m.dot(phi)
         gemv(
             byref(trans), byref(m), byref(m), byref(cdone), matdsc, int_m_data,
