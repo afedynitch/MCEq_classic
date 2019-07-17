@@ -7,7 +7,6 @@ import warnings
 
 base_path = path.dirname(path.abspath(__file__))
 sys.path.append(base_path)
-sys.path.append(base_path + "/c-NRLMSISE-00")
 
 # determine shared library extension and MKL path
 libext = None
@@ -18,7 +17,7 @@ if platform.platform().find('Linux') != -1:
 elif platform.platform().find('Darwin') != -1:
     libext = '.dylib'
 else:
-    #Windows case
+    # Windows case
     mkl_default = path.join(sys.prefix, 'Library', 'bin', 'mkl_rt')
     libext = '.dll'
 
@@ -32,24 +31,25 @@ override_debug_fcn = []
 override_max_level = 10
 # Print module name in debug output
 print_module = False
-#=========================================================================
+
+# =================================================================
 # Paths and library locations
-#=========================================================================
+# =================================================================
 
 # Directory where the data files for the calculation are stored
-data_dir = path.join(base_path, 'data')
+data_dir = path.join(base_path, 'MCEq', 'data')
 
 # File name of the MCEq database
 mceq_db_fname = "mceq_db_lext_dpm191.h5"
 
 # File name of the MCEq database
-em_db_fname = "EM_Model_Tsai-Max_Z7.31.h5"
+em_db_fname = "mceq_db_EM_Tsai-Max_Z7.31.h5"
 
 # full path to libmkl_rt.[so/dylib] (only if kernel=='MKL')
 mkl_path = mkl_default + libext
-#=========================================================================
+# =================================================================
 # Atmosphere and geometry settings
-#=========================================================================
+# =================================================================
 
 # The latest versions of MCEq work in kinetic energy not total energy
 # If you want the result to be compatible with the previous choose
@@ -69,12 +69,12 @@ prompt_ctau = 0.123
 # expect those with '_pp' suffix.
 A_target = 14.51  # <A> = 14.51 for air
 
-#parameters for EarthGeometry
+# parameters for EarthGeometry
 r_E = 6391.e3  # Earth radius in m
 h_obs = 0.  # observation level in m
 h_atm = 112.8e3  # top of the atmosphere in m
 
-#Default parameters for GeneralizedTarget
+# Default parameters for GeneralizedTarget
 len_target = 1000.  # Total length of the target [m]
 env_density = 0.001225  # density of default material in g/cm^3
 env_name = "air"
@@ -82,9 +82,9 @@ env_name = "air"
 # resonance approximation.
 max_density = 0.001225,
 
-#===========================================================================
+# =================================================================
 # Parameters of numerical integration
-#===========================================================================
+# =================================================================
 
 # Minimal energy for grid
 # The minimal energy (technically) is 1e-2 GeV. Currently you can run into
@@ -93,10 +93,10 @@ max_density = 0.001225,
 e_min = 1.
 
 # The maximal energy is 1e12 GeV, but not all interaction models run at such
-# high energies. If you are interested in lower energies, reduce this value to
-# for inclusive calculations to max. energy of interest + 4-5 orders of magnitude.
-# For single primaries the maximal energy can be also set at any value. Smaller
-# grids speed up the initialization and integration.
+# high energies. If you are interested in lower energies, reduce this value
+# to for inclusive calculations to max. energy of interest + 4-5 orders of
+# magnitude. For single primaries the maximal energy can be also set at any
+# value. Smaller grids speed up the initialization and integration.
 e_max = 1e11
 
 # Enable electromagnetic cascade with matrices from EmCA
@@ -115,12 +115,12 @@ cuda_gpu_id = 0
 # CUDA Floating point precision (default 32-bit 'float')
 cuda_fp_precision = 32
 
-#Number of MKL threads (for sparse matrix multiplication the performance
-#advantage from using more than 1 thread is limited by memory bandwidth)
-MKL_threads = 8
+# Number of MKL threads (for sparse matrix multiplication the performance
+# advantage from using more than 1 thread is limited by memory bandwidth)
+mkl_threads = 8
 
-#parameters for the odepack integrator. More details at
-#http://docs.scipy.org/doc/scipy/reference/generated/scipy.integrate.ode.html#scipy.integrate.ode
+# parameters for the odepack integrator. More details at
+# http://docs.scipy.org/doc/scipy/reference/generated/scipy.integrate.ode.html#scipy.integrate.ode
 ode_params = {
     'name': 'lsoda',
     'method': 'bdf',
@@ -129,9 +129,9 @@ ode_params = {
     'rtol': 0.01
 }
 
-#=========================================================================
+# =========================================================================
 # Advanced settings
-#=========================================================================
+# =========================================================================
 
 # The leading process is can be either decay or interaction. This depends
 # on the target density and it is usually chosen automatically. For
@@ -177,7 +177,7 @@ excpt_on_missing_particle = False
 use_isospin_sym = True
 
 # Helicity dependent muons decays from analytical expressions
-muon_helicity_dependence = False
+muon_helicity_dependence = True
 
 # Assume nucleon, pion and kaon cross sections for interactions of
 # rare or exotic particles (mostly relevant for non-compact mode)
@@ -209,7 +209,7 @@ adv_set = {
     # precision loss ~ 1%, for SIBYLL2.3.X with charm 5% above 10^7 GeV
     # Might be different for yields (set_single_primary_particle)
     # For full precision or if in doubt, use []
-    "allowed_projectiles": [],  #2212, 2112, 211, 321, 130, 11, 22],
+    "allowed_projectiles": [],  # [2212, 2112, 211, 321, 130, 11, 22],
 
     # Disable particle (production)
     "disabled_particles": [10313, 20, 19, 18, 17, 97, 98, 99, 101, 102, 103],
@@ -243,19 +243,19 @@ standard_particles += [-pid for pid in standard_particles]
 
 # unflavored particles
 # append 221, 223, 333, if eta, omega and phi needed directly
-standard_particles += [22, 111, 130, 310]  #, 221, 223, 333]
+standard_particles += [22, 111, 130, 310]  # , 221, 223, 333]
 
 # This construct provides access to the attributes as in previous
 # versions, using `from mceq_config import config`. The future versions
 # will access the module attributes directly.
 
+
 class MCEqConfigCompatibility(dict):
     def __init__(self, namespace):
         self.__dict__.update(namespace)
         if debug_level > 1:
-            warn_str = \
-            ("Config dictionary is deprecated. " +
-                "Use config.variable instead of config['variable']")
+            warn_str = ("Config dictionary is deprecated. " +
+                        "Use config.variable instead of config['variable']")
             warnings.warn(warn_str, FutureWarning)
 
     def __setitem__(self, key, value):

@@ -243,7 +243,7 @@ def solv_MKL_sparse(nsteps, dX, rho_inv, int_m, dec_m, phi, grid_idcs):
     np_fl = np.float64
 
     # Set number of threads
-    mkl.mkl_set_num_threads(byref(c_int(config.MKL_threads)))
+    mkl.mkl_set_num_threads(byref(c_int(config.mkl_threads)))
 
     # Prepare CTYPES pointers for MKL sparse CSR BLAS
     int_m_data = int_m.data.ctypes.data_as(POINTER(fl_pr))
@@ -261,10 +261,10 @@ def solv_MKL_sparse(nsteps, dX, rho_inv, int_m, dec_m, phi, grid_idcs):
     npdelta_phi = np.zeros_like(npphi)
     delta_phi = npdelta_phi.ctypes.data_as(POINTER(fl_pr))
 
-    trans = c_char('n')
+    trans = c_char(b'n')
     npmatd = np.chararray(6)
-    npmatd[0] = 'G'
-    npmatd[3] = 'C'
+    npmatd[0] = b'G'
+    npmatd[3] = b'C'
     matdsc = npmatd.ctypes.data_as(POINTER(c_char))
     m = c_int(int_m.shape[0])
     cdzero = fl_pr(0.)

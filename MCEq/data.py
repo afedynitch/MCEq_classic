@@ -234,7 +234,7 @@ class HDF5Backend(object):
             read_idx += len_data[tupidx]
 
         return {
-            'parents': sorted(six.keys(relations)),
+            'parents': sorted(list(relations)),
             'particles': sorted(list(set(particle_list))),
             'relations': dict(relations),
             'index_d': dict(index_d),
@@ -242,7 +242,7 @@ class HDF5Backend(object):
         }
 
     def _check_subgroup_exists(self, subgroup, mname):
-        available_models = six.keys(subgroup)
+        available_models = list(subgroup)
         if mname not in available_models:
             info(0, 'Invalid choice/model', mname)
             info(0, 'Choose from:\n', '\n'.join(available_models))
@@ -308,7 +308,8 @@ class HDF5Backend(object):
                 info(5, 'Replacing decay from custom decay_db.')
                 dec_index['index_d'].update(custom_index['index_d'])
 
-                # Remove manually TODO: Kaon decays to muons assumed only two-body
+                # Remove manually TODO: Kaon decays to muons assumed
+                # only two-body
                 _ = dec_index['index_d'].pop(((211, 0), (-13, 0)))
                 _ = dec_index['index_d'].pop(((-211, 0), (13, 0)))
                 _ = dec_index['index_d'].pop(((321, 0), (-13, 0)))
@@ -327,7 +328,7 @@ class HDF5Backend(object):
                     dec_index['particles'].append(parent)
                     dec_index['particles'].append(child)
 
-                dec_index['parents'] = sorted(six.keys(dec_index['relations']))
+                dec_index['parents'] = sorted(list(dec_index['relations']))
                 dec_index['particles'] = sorted(
                     list(set(dec_index['particles'])))
 
@@ -370,7 +371,7 @@ class HDF5Backend(object):
             cl_db = mceq_db['continuous_losses'][medium]
 
             index_d = {}
-            for pstr in six.keys(cl_db):
+            for pstr in list(cl_db):
                 for hel in [0, 1, -1]:
                     index_d[(int(pstr), hel)] = cl_db[pstr][self._cuts]
             if config.enable_em:
@@ -385,7 +386,7 @@ class HDF5Backend(object):
                                  hel)] = em_db["electromagnetic"]['dEdX -11'][
                                      self._cuts]
 
-        return {'parents': sorted(six.keys(index_d)), 'index_d': index_d}
+        return {'parents': sorted(list(index_d)), 'index_d': index_d}
 
 
 class Interactions(object):
@@ -468,7 +469,7 @@ class Interactions(object):
             regenerate_index = True
         if regenerate_index:
             self.particles = []
-            for p in six.keys(self.relations):
+            for p in list(self.relations):
                 if p not in self.parents:
                     _ = self.relations.pop(p, None)
                     continue
@@ -478,7 +479,7 @@ class Interactions(object):
 
         if config.adv_set['disable_direct_leptons']:
             # info(5, 'Hotfix for DPMJET, no direct leptons')
-            for p in six.keys(self.relations):
+            for p in list(self.relations):
                 self.relations[p] = [
                     c for c in self.relations[p] if not 10 < abs(c[0]) < 20
                 ]
@@ -546,7 +547,7 @@ class Interactions(object):
             return False
 
         # Check function with same mode but different parameter is supplied
-        for (xf_name, fargs) in six.keys(mpli[pstup]):
+        for (xf_name, fargs) in list(mpli[pstup]):
             if (xf_name == x_func.__name__) and (fargs[0] == args[0]):
                 info(1, 'Warning. If you modify only the value of a function,',
                      'unset and re-apply all changes')
@@ -588,7 +589,7 @@ class Interactions(object):
 
                 if (prim_pdg, -sec_pdg) in mpli:
                     # Compute average of pi+ and pi- modification matrices
-                    # Save the 'average' argument (just for meaningful printout)
+                    # Save the 'average' argument (just for meaningful output)
                     for arg_name, arg_val in mpli[(prim_pdg, -sec_pdg)]:
                         if arg_name == args[0]:
                             unflv_arg = (args[0], 0.5 * (args[1] + arg_val))
@@ -662,8 +663,8 @@ class Interactions(object):
 
         Note:
           In the current version, the matrices have to be multiplied by the
-          bin widths. In later versions they will be stored with the multiplication
-          carried out.
+          bin widths. In later versions they will be stored with the
+          multiplication carried out.
         """
         info(10, 'Called for', parent, child)
         if child not in self.relations[parent]:
@@ -673,7 +674,7 @@ class Interactions(object):
         m = self.index_d[(parent, child)]
 
         if config.adv_set['disable_leading_mesons'] and abs(child) < 2000 \
-                and (parent, -child) in six.keys(self.index_d):
+                and (parent, -child) in list(self.index_d):
             m_anti = self.index_d[(parent, -child)]
             ie = 50
             info(5, 'sum in disable_leading_mesons',
@@ -688,7 +689,7 @@ class Interactions(object):
         else:
             info(20, 'no meson inversion in leading particle veto.', parent,
                  child)
-        if (parent[0], child[0]) in six.keys(self.mod_pprod):
+        if (parent[0], child[0]) in list(self.mod_pprod):
             info(
                 5, 'using modified particle production for {0}/{1}'.format(
                     parent[0], child[0]))
@@ -766,7 +767,7 @@ class Decays(object):
 
         if regenerate_index:
             self.particles = []
-            for p in six.keys(self.relations):
+            for p in list(self.relations):
                 if p not in self.parents:
                     _ = self.relations.pop(p, None)
                     continue
@@ -798,8 +799,8 @@ class Decays(object):
           numpy.array: decay matrix
         Note:
           In the current version, the matrices have to be multiplied by the
-          bin widths. In later versions they will be stored with the multiplication
-          carried out.
+          bin widths. In later versions they will be stored with the
+          multiplication carried out.
         """
         info(20, 'entering with', parent, child)
         if child not in self.relations[parent]:
@@ -844,7 +845,8 @@ class InteractionCrossSections(object):
         self.load(interaction_model)
 
     def __getitem__(self, parent):
-        """Return the cross section in :math:`\\text{cm}^2` as a dictionary lookup."""
+        """Return the cross section in :math:`\\text{cm}^2` as a dictionary
+        lookup."""
         return self.get_cs(parent)
 
     def __contains__(self, key):
@@ -868,18 +870,19 @@ class InteractionCrossSections(object):
         Args:
           parent (int): PDG ID of parent particle
           mbarn (bool,optional): if ``True``, the units of the cross-section
-                                 will be :math:`mbarn`, else :math:`\\text{cm}^2`
+                                 will be :math:`mbarn`,
+                                 else :math:`\\text{cm}^2`
 
         Returns:
           numpy.array: cross-section in :math:`mbarn` or :math:`\\text{cm}^2`
         """
 
-        message_templ = 'HadAirCrossSections(): replacing {0} with {1} cross-section'
+        message_templ = 'replacing {0} with {1} cross section'
         if isinstance(parent, tuple):
             parent = parent[0]
-        if parent in six.keys(self.index_d):
+        if parent in list(self.index_d):
             cs = self.index_d[parent]
-        elif abs(parent) in six.keys(self.index_d):
+        elif abs(parent) in list(self.index_d):
             cs = self.index_d[abs(parent)]
         elif 100 < abs(parent) < 300 and abs(parent) != 130:
             cs = self.index_d[211]
@@ -895,9 +898,7 @@ class InteractionCrossSections(object):
         else:
             info(
                 1,
-                message_templ.format(
-                    'Strange case for parent, using 0 as cs.'))
-            # cs = self.index_d[211]
+                'Strange case for parent, using zero cross section.')
             cs = 0.
 
         if not mbarn:
@@ -931,7 +932,8 @@ class ContinuousLosses(object):
         self.load_db(material)
 
     def __getitem__(self, parent):
-        """Return the cross section in :math:`\\text{cm}^2` as a dictionary lookup."""
+        """Return the cross section in :math:`\\text{cm}^2` as
+        a dictionary lookup."""
         return self.index_d[parent]
 
     def __contains__(self, key):

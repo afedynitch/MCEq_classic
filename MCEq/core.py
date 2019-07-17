@@ -72,7 +72,7 @@ class MCEqRun(object):
             from ctypes import cdll, c_int, byref
             mkl = cdll.LoadLibrary(config.mkl_path)
             # Set number of threads
-            mkl.mkl_set_num_threads(byref(c_int(config.MKL_threads)))
+            mkl.mkl_set_num_threads(byref(c_int(config.mkl_threads)))
 
         interaction_model = normalize_hadronic_model_name(interaction_model)
 
@@ -426,7 +426,7 @@ class MCEqRun(object):
         min_idx = np.argmin(np.abs(e_tot - minimal_energy))
         self._phi0 *= 0
         p_top, n_top = self.get_nucleon_spectrum(e_tot[min_idx:])[1:]
-        if (2212, 0) in six.keys(self.pman):
+        if (2212, 0) in self.pman:
             self._phi0[min_idx + self.pman[(2212, 0)].lidx:self.pman[(
                 2212, 0)].uidx] = 1e-4 * p_top
         else:
@@ -435,11 +435,10 @@ class MCEqRun(object):
                 'Warning protons not part of equation system, can not set primary flux.'
             )
 
-        if (2112, 0) in six.keys(
-                self.pman) and not self.pman[(2112, 0)].is_resonance:
+        if (2112, 0) in self.pman and not self.pman[(2112, 0)].is_resonance:
             self._phi0[min_idx + self.pman[(2112, 0)].lidx:self.pman[(
                 2112, 0)].uidx] = 1e-4 * n_top
-        elif (2212, 0) in six.keys(self.pman):
+        elif (2212, 0) in self.pman:
             info(2, 'Neutrons not part of equation system,',
                  'substituting initial flux with protons.')
             self._phi0[min_idx + self.pman[(2212, 0)].lidx:self.pman[(

@@ -625,7 +625,7 @@ class MSIS00Atmosphere(EarthsAtmosphere):
                  season=None,
                  doy=None,
                  use_loc_altitudes=False):
-        from MCEq.nrlmsis00.msis_wrapper import cNRLMSISE00
+        from MCEq.geometry.nrlmsis_mceq import cNRLMSISE00
 
         self._msis = cNRLMSISE00()
 

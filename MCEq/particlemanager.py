@@ -248,7 +248,7 @@ class MCEqParticle(object):
         children_d = {}
         for c in self.children:
             children_d[c.pdg_id] = c
-        if tracking_particle.pdg_id not in six.keys(children_d):
+        if tracking_particle.pdg_id not in list(children_d):
             info(
                 17, 'Parent particle {0} does not decay into {1}'.format(
                     self.name, tracking_particle.name))
@@ -263,7 +263,7 @@ class MCEqParticle(object):
         secondaries_d = {}
         for s in self.hadr_secondaries:
             secondaries_d[s.pdg_id] = s
-        if tracking_particle.pdg_id not in six.keys(secondaries_d):
+        if tracking_particle.pdg_id not in list(secondaries_d):
             info(
                 17, 'Parent particle {0} does not produce {1} at the vertex'.
                 format(self.name, tracking_particle.name))
@@ -611,6 +611,10 @@ class MCEqParticle(object):
         else:
             return NotImplemented
 
+    def __hash__(self):
+        """Instruction for comuting the hash"""
+        return hash(self.name)
+
     def __repr__(self):
         a_string = ("""
         {0}:
@@ -798,7 +802,7 @@ class ParticleManager(object):
                                 tracking_particle.helicity)
 
             for i in range(100):
-                if unique_child_pdg not in six.keys(self.pdg2pref):
+                if unique_child_pdg not in list(self.pdg2pref):
                     break
                 info(
                     20, '{0}: trying to find unique_pdg ({1}) for {2}'.format(
@@ -840,9 +844,9 @@ class ParticleManager(object):
                 self.tracking_relations.append(
                     (parent_pdg, child_pdg, alias_name, from_interactions))
                 track_success = True
-        if track_success and tracking_particle.name not in six.keys(
+        if track_success and tracking_particle.name not in list(
                 self.pname2pref):
-            tracking_particle.mceqidx = np.max(six.keys(self.mceqidx2pref)) + 1
+            tracking_particle.mceqidx = np.max(list(self.mceqidx2pref)) + 1
             self.all_particles.append(tracking_particle)
             self.cascade_particles.append(tracking_particle)
             self._update_particle_tables()
@@ -1014,6 +1018,14 @@ class ParticleManager(object):
             from_interactions=True,
             use_helicities=False)
 
+    def __contains__(self, pdg_id_or_name):
+        """Defines the `in` operator to look for particles"""
+        if isinstance(pdg_id_or_name, six.integer_types):
+            pdg_id_or_name = (pdg_id_or_name, 0)
+        elif isinstance(pdg_id_or_name, six.string_types):
+            pdg_id_or_name = (_pdata.pdg_id(pdg_id_or_name), 0)
+        return pdg_id_or_name in list(self.pdg2pref)
+
     def __getitem__(self, pdg_id_or_name):
         """Returns reference to particle object."""
         if isinstance(pdg_id_or_name, tuple):
@@ -1021,15 +1033,11 @@ class ParticleManager(object):
         elif isinstance(pdg_id_or_name, six.integer_types):
             return self.pdg2pref[(pdg_id_or_name, 0)]
         else:
-            return self.pdg2pref[_pname(pdg_id_or_name)]
+            return self.pdg2pref[(_pdata.pdg_id(pdg_id_or_name), 0)]
 
     def keys(self):
         """Returns pdg_ids of all particles"""
         return [p.pdg_id for p in self.all_particles]
-
-    def __contains__(self, key):
-        """Defines the `in` operator to look for particles"""
-        return key in self.all_particles
 
     def __repr__(self):
         str_out = ""

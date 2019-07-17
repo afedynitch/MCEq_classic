@@ -22,8 +22,9 @@ _xmat = None
 
 
 def normalize_hadronic_model_name(name):
+    import re
     """Converts hadronic model name into standard form"""
-    return name.translate(None, ".-").upper()
+    return re.sub('[-.]', '', name).upper()
 
 
 def theta_deg(cos_theta):
