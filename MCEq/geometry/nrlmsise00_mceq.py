@@ -1,6 +1,6 @@
 from MCEq.misc import info
 import six
-import nrlmsis00.c_msis_interface as cmsis
+import MCEq.nrlmsise00.nrlmsise00 as cmsis
 
 
 class NRLMSISE00Base(object):
@@ -95,7 +95,7 @@ class cNRLMSISE00(NRLMSISE00Base):
             self.flags.switches[i] = cmsis.c_int(1)
 
     def set_location(self, tag):
-        if tag not in six.keys(self.locations):
+        if tag not in list(self.locations):
             raise Exception(
                 "NRLMSISE00::set_location(): Unknown location tag '{0}'.".
                 format(tag))

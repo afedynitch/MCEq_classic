@@ -1,17 +1,18 @@
 '''
-Created on Feb 18, 2015
-
-@author: afedynitch
+Ctypes interface for struct-based interface to the C-version of NRLMSISE-00.
+This C version of NRLMSISE-00 is written by Dominik Brodowski 
 '''
 
 from ctypes import (cdll, Structure, c_int, c_double, POINTER)
-import os.path as path
-base = path.dirname(path.abspath(__file__))
+import os
+base = os.path.dirname(os.path.abspath(__file__))
 
-try:
-    msis = cdll.LoadLibrary("./msis-00.so")
-except OSError:
-    msis = cdll.LoadLibrary(path.join(base, "msis-00.so"))
+for fn in os.listdir(base):
+    if 'libnrlmsis' in fn and (fn.endswith('.so') or
+                               fn.endswith('.dll') or 
+                               fn.endswith('.dylib')):
+        msis = cdll.LoadLibrary(os.path.join(base, fn))
+        break
 
 
 class nrlmsise_flags(Structure):

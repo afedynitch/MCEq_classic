@@ -1,8 +1,7 @@
-
 from __future__ import print_function
 from ctypes import (c_int, c_double, pointer, byref)
-from .c_msis_interface import (msis, nrlmsise_output, nrlmsise_input,
-                               nrlmsise_flags, ap_array)
+from MCEq.nrlmsise00.nrlmsise00 import (
+    msis, nrlmsise_output, nrlmsise_input, nrlmsise_flags, ap_array)
 
 output = [nrlmsise_output() for i in range(17)]
 inp = [nrlmsise_input() for i in range(17)]
