@@ -5,3 +5,7 @@ docs/_build
 examples/.ipynb*
 _skbuild
 *.h5
+build
+dist
+*egg-info
+.nfs*
